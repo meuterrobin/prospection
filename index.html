@@ -131,6 +131,7 @@ details.msgs[open] summary:after{content:" ⌄";}
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.2/dist/umd/supabase.js"></script>
 <script>
 {
+const APP_VERSION = "2026-11-26.4";
 const SUPABASE_URL = "https://ytrjfjfeyzbzyrefyqgb.supabase.co";
 const SUPABASE_KEY = "sb_publishable_4RgNkgjYq8yuEgB6zh2Kgg_rgMCoXJg";
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: true, storageKey: "ic-prospection" } });
@@ -695,10 +696,22 @@ function openPassword(id) {
   });
 }
 
+// ---------- mise à jour automatique : recharge si une nouvelle version est en ligne ----------
+async function checkVersion() {
+  try {
+    const res = await fetch(location.pathname + "?check=" + Date.now(), { cache: "no-store" });
+    const live = (await res.text()).match(/APP_VERSION = "([^"]+)"/)?.[1];
+    if (live && live !== APP_VERSION && !document.querySelector(".dialog") && !["TEXTAREA", "INPUT"].includes(document.activeElement?.tagName)) {
+      location.replace(location.pathname + "?v=" + encodeURIComponent(live) + location.hash);
+    }
+  } catch { /* hors ligne : on garde la version actuelle */ }
+}
+
 // ---------- démarrage ----------
 window.addEventListener("hashchange", render);
-document.addEventListener("visibilitychange", () => { if (!document.hidden) refresh(); });
-setInterval(() => { if (!document.hidden && !document.querySelector(".dialog") && document.activeElement?.tagName !== "TEXTAREA" && document.activeElement?.tagName !== "INPUT") refresh(); }, 60000);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) { checkVersion(); refresh(); } });
+checkVersion();
+setInterval(() => { if (!document.hidden && !document.querySelector(".dialog") && document.activeElement?.tagName !== "TEXTAREA" && document.activeElement?.tagName !== "INPUT") { checkVersion(); refresh(); } }, 60000);
 sb.auth.onAuthStateChange((_e, session) => { S.session = session; });
 sb.auth.getSession().then(({ data }) => { S.session = data.session; refresh(); });
 }
