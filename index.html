@@ -142,7 +142,7 @@ const STAGES = [
 const STAGE = Object.fromEntries(STAGES);
 const KIND = { comment: "Commentaire", reply: "Réponse sous le commentaire", dm_in: "Message reçu", dm_out: "Message envoyé", auto: "Message automatique" };
 
-const S = { session: null, me: null, members: [], contacts: [], todo: [], autos: [], events: [], filter: "all", stageFilter: "", search: "", plusTab: "auto", period: 30 };
+const S = { session: null, me: null, members: [], contacts: [], todo: [], autos: [], events: [], drafts: [], source: new Map(), sourceFilter: "", filter: "all", stageFilter: "", search: "", plusTab: "auto", period: 30 };
 const app = document.getElementById("app");
 
 // ---------- utilitaires ----------
@@ -152,6 +152,10 @@ const isAdmin = () => S.me && S.me.role === "admin";
 const label = (c) => c ? (c.username ? "@" + c.username : (c.display_name || "Sans nom")) : "";
 const initial = (c) => (c?.username || c?.display_name || "?").replace(/^@/, "").charAt(0).toUpperCase();
 const memberName = (id) => S.members.find((m) => m.user_id === id)?.display_name || "";
+const setterName = () => S.members.find((m) => m.role === "setter" && m.active)?.display_name || "Léo";
+const sourceOf = (id) => S.source.get(id) || "autre";
+const SOURCES = [["presence", "Présence"], ["lead_magnet", "Lead magnet"], ["autre", "Autres"]];
+const pendingDraft = (i) => S.drafts.some((d) => ["a_valider", "valide", "envoi"].includes(d.status) && (d.interaction_id === i.id || d.comment_id === i.external_id));
 function ago(d) {
   if (!d) return "";
   const s = (Date.now() - new Date(d).getTime()) / 1000;
@@ -184,18 +188,28 @@ const svg = (k) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" s
 
 // ---------- données ----------
 async function loadAll() {
-  const [m, c, t, a, e] = await Promise.all([
+  const [m, c, t, a, e, d] = await Promise.all([
     sb.from("team_members").select("*").order("created_at"),
     sb.from("contacts").select("*").order("last_activity_at", { ascending: false }).limit(2000),
     sb.from("interactions").select("*").eq("handled", false).order("created_at", { ascending: false }).limit(300),
     sb.from("automations").select("*").order("sort"),
     sb.from("automation_events").select("keyword,contact_id,platform,event,ok,created_at").order("created_at", { ascending: false }).limit(10000),
+    sb.from("reply_drafts").select("*").in("status", ["a_valider", "valide", "envoi", "echec"]).order("created_at", { ascending: false }).limit(200),
   ]);
   S.members = m.data || [];
   S.contacts = c.data || [];
   S.todo = t.data || [];
   S.autos = a.data || [];
   S.events = e.data || [];
+  S.drafts = d.data || [];
+  // Case de chaque prospect : Présence en priorité, sinon Lead magnet
+  const cat = Object.fromEntries(S.autos.map((x) => [x.keyword, x.category]));
+  S.source = new Map();
+  for (const ev of S.events) {
+    if (ev.event !== "trigger") continue;
+    const k = cat[ev.keyword];
+    if (k === "presence" || (k === "lead_magnet" && !S.source.has(ev.contact_id))) S.source.set(ev.contact_id, k);
+  }
   S.me = S.members.find((x) => x.user_id === S.session?.user?.id && x.active) || null;
 }
 const contactById = (id) => S.contacts.find((c) => c.id === id);
@@ -241,7 +255,7 @@ function groups() {
   const map = new Map();
   for (const i of S.todo) {
     const c = contactById(i.contact_id);
-    if (!c || c.do_not_contact) continue;
+    if (!c || c.do_not_contact || pendingDraft(i)) continue;
     if (S.filter !== "all" && c.platform !== S.filter) continue;
     if (!map.has(c.id)) map.set(c.id, { c, items: [] });
     map.get(c.id).items.push(i);
@@ -276,10 +290,36 @@ function viewToday() {
   ${mine.length ? `<div class="section"><h2>Transférés à toi</h2><span class="muted">${mine.length}</span></div><div class="card">${mine.map((c) =>
     contactRow(c, "", c.last_activity_at, `<div class="transfer">${esc(c.transfer_note)}</div><div class="btns"><a class="btn small" href="#p-${c.id}">Ouvrir</a>${c.username ? `<button class="btn small" data-act="copy" data-v="${esc(c.username)}">Copier le pseudo</button>` : ""}<button class="btn small" data-act="seen" data-id="${c.id}">Vu</button></div>`)).join("")}</div>` : ""}
   ${vocals.length && isAdmin() ? `<div class="section"></div><section class="vocal"><div class="kicker">Pour toi · Instagram</div><h2>${vocals.length} vocal${vocals.length > 1 ? "s" : ""} à envoyer.</h2>${vocals.slice(0, 3).map(vRow).join("")}${vocals.length > 3 ? `<div class="vrow"><a class="vbtn" href="#vocaux" style="display:inline-flex;align-items:center;text-decoration:none">Voir les ${vocals.length}</a></div>` : ""}</section>` : ""}
-  <div class="section"><h2>À traiter</h2><span class="muted">${g.length}</span></div>
-  <div class="card">${g.length ? g.map(({ c, items }) => contactRow(c, items[0].text + (items.length > 1 ? ` (+${items.length - 1})` : ""), items[0].created_at,
-    `<div class="chips"><span class="chip">${esc(KIND[items[0].kind] || "")}</span></div><div class="btns">${c.username ? `<button class="btn small" data-act="copy" data-v="${esc(c.username)}">Copier le pseudo</button>` : ""}<a class="btn small" href="#p-${c.id}">Ouvrir</a>${canEdit() ? `<button class="btn small primary" data-act="done" data-id="${c.id}">Traité</button>` : ""}</div>`)).join("") : `<div class="empty">Rien à traiter pour l'instant.</div>`}</div>
+  ${draftsBlock()}
+  ${g.length ? SOURCES.map(([k, l]) => {
+    const part = g.filter(({ c }) => sourceOf(c.id) === k);
+    if (!part.length) return "";
+    const title = k === "presence" ? `Présence · ${esc(setterName())} prend la relève` : k === "lead_magnet" ? "Lead magnet" : "Autres commentaires et messages";
+    return `<div class="section"><h2>${title}</h2><span class="muted">${part.length}</span></div>
+    <div class="card">${part.map(({ c, items }) => contactRow(c, items[0].text + (items.length > 1 ? ` (+${items.length - 1})` : ""), items[0].created_at,
+    `<div class="chips"><span class="chip">${esc(KIND[items[0].kind] || "")}</span></div><div class="btns">${c.username ? `<button class="btn small" data-act="copy" data-v="${esc(c.username)}">Copier le pseudo</button>` : ""}<a class="btn small" href="#p-${c.id}">Ouvrir</a>${canEdit() ? `<button class="btn small primary" data-act="done" data-id="${c.id}">Traité</button>` : ""}</div>`)).join("")}</div>`;
+  }).join("") : `<div class="section"><h2>À traiter</h2></div><div class="card"><div class="empty">Rien à traiter pour l'instant.</div></div>`}
   </main>${nav("aujourdhui")}`;
+}
+
+function draftsBlock() {
+  const todo = S.drafts.filter((d) => d.status === "a_valider");
+  const queued = S.drafts.filter((d) => ["valide", "envoi"].includes(d.status)).length;
+  const failed = S.drafts.filter((d) => d.status === "echec");
+  if (!todo.length && !queued && !failed.length) return "";
+  const ed = canEdit();
+  return `<div class="section"><h2>Réponses proposées par Claude</h2><span class="muted">${todo.length}</span></div>
+  ${queued ? `<p class="note" style="margin-top:0">${queued} réponse${queued > 1 ? "s partent" : " part"} dans quelques minutes.</p>` : ""}
+  <div class="card">${todo.map((d) => {
+    const c = contactById(d.contact_id) || { id: d.contact_id, platform: d.platform };
+    return contactRow(c, d.comment_text || "", d.created_at, `${d.claude_note ? `<div class="chips"><span class="chip warm">${esc(d.claude_note)}</span></div>` : ""}
+      <label for="d-${d.id}" style="margin-top:8px">Réponse proposée</label>
+      <textarea id="d-${d.id}" ${ed ? "" : "disabled"} style="min-height:72px">${esc(d.draft)}</textarea>
+      ${ed ? `<div class="btns"><button class="btn small primary" data-act="draft-ok" data-id="${d.id}">Valider</button><button class="btn small" data-act="draft-skip" data-id="${d.id}">Ignorer</button></div>` : ""}`);
+  }).join("")}${failed.map((d) => {
+    const c = contactById(d.contact_id) || { id: d.contact_id, platform: d.platform };
+    return contactRow(c, d.draft, d.created_at, `<div class="chips"><span class="chip warm">Publication impossible</span></div>`);
+  }).join("")}</div>`;
 }
 
 function vRow(c) {
@@ -297,9 +337,10 @@ function viewVocals() {
 
 function viewProspects() {
   const q = S.search.trim().toLowerCase();
-  const list = S.contacts.filter((c) => (!S.stageFilter || c.stage === S.stageFilter) && (!q || label(c).toLowerCase().includes(q) || (c.display_name || "").toLowerCase().includes(q)) && (S.filter === "all" || c.platform === S.filter));
+  const list = S.contacts.filter((c) => (!S.sourceFilter || sourceOf(c.id) === S.sourceFilter) && (!S.stageFilter || c.stage === S.stageFilter) && (!q || label(c).toLowerCase().includes(q) || (c.display_name || "").toLowerCase().includes(q)) && (S.filter === "all" || c.platform === S.filter));
   return `<main class="wrap">${header(`${S.contacts.length} personnes`, "Prospects.", "")}
   ${seg()}
+  <div class="seg" role="group" aria-label="Case" style="grid-template-columns:repeat(4,minmax(0,1fr))"><button data-act="sourcef" data-v="" aria-pressed="${!S.sourceFilter}">Tous</button>${SOURCES.map(([k, l]) => `<button data-act="sourcef" data-v="${k}" aria-pressed="${S.sourceFilter === k}">${l}</button>`).join("")}</div>
   <label for="search" class="sr" style="position:absolute;left:-9999px">Rechercher</label>
   <input id="search" type="search" placeholder="Rechercher un pseudo ou un nom" value="${esc(S.search)}" data-act="search" style="margin-bottom:12px">
   <div class="stages" role="group" aria-label="Étape"><button data-act="stagef" data-v="" aria-pressed="${!S.stageFilter}">Toutes</button>${STAGES.map(([k, l]) => `<button data-act="stagef" data-v="${k}" aria-pressed="${S.stageFilter === k}">${l} · ${S.contacts.filter((c) => c.stage === k).length}</button>`).join("")}</div>
@@ -394,6 +435,13 @@ const MODE = {
   off: { instagram: "Rien", facebook: "Rien" },
 };
 
+function modeText(a, p) {
+  const m = p === "instagram" ? a.mode_instagram : a.mode_facebook;
+  if (m === "question") return `Claude écrit en privé${a.first_delay_minutes ? ` ${a.first_delay_minutes} min après` : ""}, puis répond sous le commentaire`;
+  if (m === "vocal") return "Vocal de Robin, puis Claude répond sous le commentaire";
+  return MODE[m]?.[p] || "";
+}
+
 function autoStats(a) {
   const since = S.period ? Date.now() - S.period * 86400000 : 0;
   const ev = S.events.filter((e) => e.keyword === a.keyword && e.ok && new Date(e.created_at).getTime() >= since && (S.filter === "all" || e.platform === S.filter));
@@ -436,7 +484,7 @@ function autoCard(a) {
   if ((has("ressource") || has("question")) && a.relance_replies?.length) msg.push(`<div class="mlabel">Relance publique après ${a.relance_hours} h sans réaction</div>${a.relance_replies.map((r) => `<p class="bubble">${tpl(r, a)}</p>`).join("")}`);
   return `<section class="card auto">
     <div class="auto-head"><div><div class="kicker">Mot-clé</div><h2 class="kw">${esc(a.label)}</h2></div><span class="chip ${a.active ? "" : "grey"}">${a.active ? "Actif" : "En pause"}</span></div>
-    <div class="modes"><div><span class="plat instagram">Instagram</span>${esc(MODE[a.mode_instagram]?.instagram || "")}</div><div><span class="plat facebook">Facebook</span>${esc(MODE[a.mode_facebook]?.facebook || "")}</div></div>
+    <div class="modes"><div><span class="plat instagram">Instagram</span>${esc(modeText(a, "instagram"))}</div><div><span class="plat facebook">Facebook</span>${esc(modeText(a, "facebook"))}</div>${a.handover_to_setter ? `<div><span class="plat" style="color:var(--sage)">Ensuite</span>${esc(setterName())} prend la relève quand la personne répond</div>` : ""}</div>
     <div class="minis"><div class="mini"><span>Commentaires</span><b>${st.trig}</b></div><div class="mini"><span>Ont réagi</span><b>${has("vocal") && !has("ressource") && !has("question") ? st.vocalDone : st.reacted}</b></div><div class="mini"><span>Appels</span><b>${st.calls}</b></div></div>
     ${rows.map(([l, n]) => `<div class="frow"><div class="top"><span>${l}</span><b>${n}<em>${l === "Commentaires" ? "" : pct(n, st.trig)}</em></b></div><div class="bar"><i style="width:${Math.max(2, Math.round((n / max) * 100))}%"></i></div></div>`).join("")}
     ${msg.length ? `<details class="msgs"><summary>Voir les messages</summary>${msg.join("")}<p class="note"><span class="ph">prénom</span> est remplacé par le prénom sur Facebook. Sur Instagram, la phrase part sans prénom.</p></details>` : ""}
@@ -454,7 +502,10 @@ function viewAutomations() {
     <div class="kpi"><span>Messages automatiques</span><b>${n("dm") + n("resource") + n("followup")}</b></div>
     <div class="kpi"><span>Réponses publiques</span><b>${n("public_reply") + n("relance")}</b></div>
   </div>
-  ${list.length ? list.map(autoCard).join("") : `<div class="card"><div class="empty">Aucune automatisation.</div></div>`}
+  ${list.length ? [["presence", "Présence"], ["lead_magnet", "Lead magnets"]].map(([k, l]) => {
+    const part = list.filter((a) => (a.category || "lead_magnet") === k);
+    return part.length ? `<div class="section"><h2>${l}</h2><span class="muted">${part.length}</span></div>${part.map(autoCard).join("")}` : "";
+  }).join("") : `<div class="card"><div class="empty">Aucune automatisation.</div></div>`}
   <p class="note">Pour créer ou modifier une automatisation, demande à Claude.</p>`;
 }
 
@@ -523,6 +574,7 @@ app.addEventListener("click", async (e) => {
   if (act === "filter") { S.filter = v; return render(); }
   if (act === "stagef") { S.stageFilter = v; return render(); }
   if (act === "plustab") { S.plusTab = v; return render(); }
+  if (act === "sourcef") { S.sourceFilter = v; return render(); }
   if (act === "period") { S.period = Number(v); return render(); }
   if (act === "logout") {
     if (S.me) return dialog(`<h2>Se déconnecter ?</h2><p class="sub">Connecté en tant que ${esc(S.me.display_name)}.</p>`, logout);
@@ -531,10 +583,24 @@ app.addEventListener("click", async (e) => {
   if (!canEdit()) return;
   b.disabled = true;
   if (act === "done") return markHandled(id);
+  if (act === "draft-ok" || act === "draft-skip") {
+    const d = S.drafts.find((x) => String(x.id) === id);
+    const patch = act === "draft-ok"
+      ? { status: "valide", draft: (document.getElementById("d-" + id)?.value || d.draft).trim() }
+      : { status: "ignore" };
+    if (act === "draft-ok" && !patch.draft) { b.disabled = false; return toast("La réponse est vide"); }
+    const { error } = await sb.from("reply_drafts").update(patch).eq("id", d.id);
+    if (error) { b.disabled = false; return toast("Erreur : " + error.message); }
+    if (act === "draft-skip" && d.interaction_id) {
+      await sb.from("interactions").update({ handled: true, handled_by: S.me.user_id, handled_at: new Date().toISOString() }).eq("id", d.interaction_id);
+    }
+    toast(act === "draft-ok" ? "Validé : la réponse part dans quelques minutes" : "Commentaire ignoré");
+    return refresh();
+  }
   if (act === "seen") { await updateContact(id, { transfer_note: null }); return render(); }
   if (act === "vocal-done") {
     if (await updateContact(id, { needs_vocal: false, stage: ["nouveau"].includes(contactById(id)?.stage) ? "premier_message" : contactById(id)?.stage })) {
-      await logActivity(id, "vocal envoyé"); toast("Vocal noté comme envoyé"); render();
+      await logActivity(id, "vocal envoyé"); toast("Vocal noté. Je réponds sous son commentaire dans quelques minutes."); render();
     }
     return;
   }
