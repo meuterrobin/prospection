@@ -167,7 +167,7 @@ details.msgs[open] summary:after{content:" ⌄";}
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.2/dist/umd/supabase.js"></script>
 <script>
 {
-const APP_VERSION = "2026-11-26.8";
+const APP_VERSION = "2026-11-26.9";
 const SUPABASE_URL = "https://ytrjfjfeyzbzyrefyqgb.supabase.co";
 const SUPABASE_KEY = "sb_publishable_4RgNkgjYq8yuEgB6zh2Kgg_rgMCoXJg";
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: true, storageKey: "ic-prospection" } });
@@ -186,8 +186,8 @@ const app = document.getElementById("app");
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const canEdit = () => S.me && ["admin", "setter"].includes(S.me.role);
 const isAdmin = () => S.me && S.me.role === "admin";
-const label = (c) => c ? (c.username ? "@" + c.username : (c.display_name || "Sans nom")) : "";
-const initial = (c) => (c?.username || c?.display_name || "?").replace(/^@/, "").charAt(0).toUpperCase();
+const label = (c) => c ? (c.username ? "@" + c.username : (c.display_name || (c.platform === "facebook" ? "Profil Facebook" : "Profil Instagram"))) : "";
+const initial = (c) => (c?.username || c?.display_name || (c?.platform === "facebook" ? "f" : "i")).replace(/^@/, "").charAt(0).toUpperCase();
 const memberName = (id) => S.members.find((m) => m.user_id === id)?.display_name || "";
 const setterName = () => S.members.find((m) => m.role === "setter" && m.active)?.display_name || "Léo";
 const sourceOf = (id) => S.source.get(id) || "autre";
@@ -241,13 +241,17 @@ const svg = (k) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" s
 
 // ---------- données ----------
 async function loadAll() {
-  const [m, c, t, a, e] = await Promise.all([
+  const since = new Date(Date.now() - 21 * 86400000).toISOString();
+  const [m, c, t, a, e, k] = await Promise.all([
     sb.from("team_members").select("*").order("created_at"),
     sb.from("contacts").select("*").order("last_activity_at", { ascending: false }).limit(3000),
     sb.from("interactions").select("id,contact_id,kind,text,created_at").eq("handled", false).eq("kind", "dm_in").order("created_at", { ascending: false }).limit(500),
     sb.from("automations").select("*").order("sort"),
     sb.from("automation_events").select("keyword,contact_id,platform,event,ok,created_at").order("created_at", { ascending: false }).limit(10000),
+    sb.from("interactions").select("contact_id,text").eq("kind", "comment").gte("created_at", since).order("created_at", { ascending: false }).limit(3000),
   ]);
+  S.lastComment = new Map();
+  for (const x of k.data || []) if (!S.lastComment.has(x.contact_id) && x.text) S.lastComment.set(x.contact_id, x.text);
   S.members = m.data || [];
   S.contacts = c.data || [];
   S.todo = t.data || [];
@@ -327,7 +331,8 @@ function item(c) {
       <span class="l2">${esc(meta)}</span>
       ${first ? `<span class="l3"><span class="tag ${first.cls}">${esc(first.tag)}</span><span class="txt">${esc(first.text || "")}</span></span>`
         : c.needs_vocal ? `<span class="l3"><span class="tag grey">Vocal à envoyer</span></span>`
-        : c.do_not_contact ? `<span class="l3"><span class="tag grey">Ne pas contacter</span></span>` : ""}
+        : c.do_not_contact ? `<span class="l3"><span class="tag grey">Ne pas contacter</span></span>`
+        : !c.username && !c.display_name && S.lastComment?.get(c.id) ? `<span class="l3"><span class="txt">« ${esc(S.lastComment.get(c.id))} »</span></span>` : ""}
     </span>
     <span class="chev" aria-hidden="true">›</span></a>`;
 }
