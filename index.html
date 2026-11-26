@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#14362b">
+<meta name="robots" content="noindex, nofollow">
+<title>Prospection · Inner Clarity</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..600;1,9..144,300..600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --cream:#faf8f4;--white:#fff;--forest:#14362b;--forest-deep:#0e231c;--sage:#527d54;--sage-light:#7fa98c;--sage-tint:#e8efe9;
+  --line:#ebe8e2;--line-strong:#cfc9bd;--ink:#1b1b1b;--ink2:#4a4a4a;--ink3:#5a5a5a;--ink4:#6a6a6a;
+  --warm-bg:#fbf2e6;--warm-ink:#a06522;--blue-bg:#ecf2fb;--blue-ink:#3a5fa0;--rose-ink:#a84953;
+  --serif:'Fraunces',Georgia,serif;--sans:-apple-system,BlinkMacSystemFont,'SF Pro Text','Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box;min-width:0}
+html,body{margin:0;background:var(--cream);color:var(--ink);font:16px/1.5 var(--sans);-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+a{color:var(--forest)}
+.wrap{max-width:780px;margin:0 auto;padding:calc(env(safe-area-inset-top) + 28px) 18px 120px}
+.kicker{font-size:12px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--sage)}
+h1{margin:4px 0 0;font:italic 400 clamp(32px,6vw,40px)/1.05 var(--serif);letter-spacing:-.02em;color:var(--forest)}
+h2{margin:0;font-size:19px;font-weight:700;letter-spacing:-.01em}
+.sub{margin:6px 0 0;color:var(--ink3);font-weight:300}
+.head{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;margin-bottom:18px}
+.avatar{flex:none;width:44px;height:44px;border-radius:50%;border:0;background:var(--forest);color:#f5f3ee;font-weight:600}
+.seg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:2px;padding:3px;border-radius:999px;background:#efebe4;margin:0 0 16px}
+.seg button{height:40px;border:0;border-radius:999px;background:transparent;font-size:14px;font-weight:600;color:var(--ink3)}
+.seg button[aria-pressed=true]{background:#fff;color:var(--forest);box-shadow:0 1px 4px rgba(20,54,43,.14)}
+.card{background:#fff;border:1px solid var(--line);border-radius:22px;overflow:hidden}
+.section{margin:22px 0 10px;display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:0 4px}
+.muted{color:var(--ink4);font-size:13px}
+.row{display:flex;gap:12px;padding:14px 16px;border-top:1px solid var(--line);align-items:flex-start}
+.row:first-child{border-top:0}
+.ini{flex:none;width:40px;height:40px;border-radius:50%;background:var(--sage-tint);color:var(--forest);display:flex;align-items:center;justify-content:center;font:italic 18px var(--serif)}
+.grow{flex:1;display:flex;flex-direction:column;gap:4px}
+.line1{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.name{font-weight:600;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:60%}
+.plat{font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase}
+.plat.instagram{color:var(--rose-ink)}.plat.facebook{color:var(--blue-ink)}
+.time{margin-left:auto;font-size:12.5px;color:var(--ink4);white-space:nowrap}
+.text{margin:0;font-size:14px;line-height:1.45;color:var(--ink2);overflow-wrap:anywhere}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+.chip{display:inline-flex;align-items:center;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:600;background:var(--sage-tint);color:var(--forest)}
+.chip.warm{background:var(--warm-bg);color:var(--warm-ink)}.chip.blue{background:var(--blue-bg);color:var(--blue-ink)}.chip.grey{background:#f1eee8;color:var(--ink3)}
+.btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.btn{height:40px;padding:0 16px;border-radius:999px;border:1.5px solid var(--line-strong);background:transparent;color:var(--forest);font-size:14px;font-weight:600;display:inline-flex;align-items:center;gap:6px;text-decoration:none}
+.btn.primary{background:var(--forest);border-color:var(--forest);color:#fff}
+.btn.small{height:36px;padding:0 13px;font-size:13px}
+.btn:disabled{opacity:.5;cursor:default}
+.empty{padding:22px 18px;color:var(--ink4);font-size:14.5px;text-align:center}
+.vocal{background:var(--forest);border-radius:26px;padding:18px 18px 10px;color:#f5f3ee}
+.vocal .kicker{color:var(--sage-light)}
+.vocal h2{font:400 24px/1.2 var(--serif);color:#f5f3ee;margin:4px 0 8px}
+.vrow{display:flex;align-items:center;gap:12px;padding:8px 0;border-top:1px solid rgba(245,243,238,.12)}
+.vrow .who{flex:1;display:flex;flex-direction:column}
+.vrow .who b{font-size:15px}.vrow .who span{font-size:12.5px;color:#c9d8cd}
+.vbtn{height:40px;padding:0 14px;border-radius:999px;border:1px solid rgba(245,243,238,.3);background:transparent;color:#f5f3ee;font-size:13px;font-weight:600}
+.vbtn.fill{background:#f5f3ee;color:var(--forest);border-color:#f5f3ee}
+.transfer{background:var(--warm-bg);border:1px solid #f0dfc6;border-radius:18px;padding:12px 14px;margin-top:8px;font-size:14px;color:#6b4515}
+input[type=text],input[type=email],input[type=password],input[type=search],select,textarea{width:100%;height:46px;padding:0 14px;border:1.5px solid var(--line-strong);border-radius:14px;background:#fff;font-size:16px}
+textarea{height:auto;min-height:96px;padding:12px 14px;line-height:1.45;resize:vertical}
+input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid var(--sage);outline-offset:2px}
+label{display:block;font-size:13px;font-weight:600;color:var(--ink3);margin:12px 0 6px}
+.stages{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin:0 0 14px;scrollbar-width:none}
+.stages button{flex:none;height:36px;padding:0 13px;border-radius:999px;border:1.5px solid var(--line-strong);background:#fff;font-size:13px;font-weight:600;color:var(--ink3)}
+.stages button[aria-pressed=true]{background:var(--forest);border-color:var(--forest);color:#fff}
+.tl{position:relative;padding-left:18px;margin:8px 0}
+.tl:before{content:"";position:absolute;left:5px;top:6px;bottom:6px;width:2px;background:var(--line)}
+.ev{position:relative;padding:8px 0}
+.ev:before{content:"";position:absolute;left:-17px;top:14px;width:10px;height:10px;border-radius:50%;background:#fff;border:2px solid var(--sage)}
+.ev.out:before{background:var(--forest);border-color:var(--forest)}
+.ev .meta{font-size:12px;color:var(--ink4);font-weight:600}
+.ev p{margin:2px 0 0;font-size:14.5px;color:var(--ink2);overflow-wrap:anywhere}
+.kpis{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.kpi{background:#fff;border:1px solid var(--line);border-radius:20px;padding:14px 16px}
+.kpi b{display:block;font:400 34px/1.05 var(--serif);color:var(--forest)}
+.kpi span{font-size:13px;color:var(--ink4);font-weight:600}
+.bar{height:6px;border-radius:999px;background:#f1eee8;overflow:hidden;margin-top:6px}.bar i{display:block;height:100%;background:var(--sage-light);border-radius:999px}
+nav.tabs{position:fixed;left:0;right:0;bottom:0;background:rgba(250,248,244,.95);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border-top:1px solid var(--line);padding:6px 6px calc(env(safe-area-inset-bottom) + 6px);display:grid;grid-template-columns:repeat(5,minmax(0,1fr));z-index:10}
+nav.tabs a{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 0;font-size:11px;font-weight:600;color:var(--ink4);text-decoration:none;position:relative}
+nav.tabs a[aria-current=page]{color:var(--forest)}
+nav.tabs svg{width:24px;height:24px}
+.badge{position:absolute;top:2px;left:calc(50% + 6px);min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:#c84d4d;color:#fff;font-size:11px;line-height:18px;text-align:center}
+.toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + 86px);transform:translateX(-50%);background:var(--forest-deep);color:#f5f3ee;padding:10px 16px;border-radius:999px;font-size:14px;font-weight:600;opacity:0;transition:opacity .2s;pointer-events:none;z-index:20;max-width:90vw}
+.toast.show{opacity:1}
+.login{max-width:420px;margin:0 auto;padding:12vh 20px 40px}
+.err{color:#a3332b;font-size:14px;margin-top:10px}
+.back{display:inline-flex;align-items:center;gap:4px;height:44px;font-weight:500;text-decoration:none;color:var(--forest)}
+.split{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}
+.dialog{position:fixed;inset:0;background:rgba(14,35,28,.35);display:flex;align-items:flex-end;justify-content:center;z-index:30;padding:12px}
+.sheet{background:#fff;border-radius:24px;padding:20px;width:100%;max-width:480px;margin-bottom:env(safe-area-inset-bottom)}
+@media(min-width:900px){
+  nav.tabs{top:0;bottom:0;right:auto;width:96px;grid-template-columns:1fr;grid-auto-rows:72px;align-content:start;padding-top:28px;border-top:0;border-right:1px solid var(--line)}
+  .wrap{padding-left:120px;max-width:900px}
+  .toast{bottom:32px}
+  .dialog{align-items:center}
+}
+@media(prefers-reduced-motion:reduce){.toast{transition:none}}
+</style>
+</head>
+<body>
+<div id="app" aria-live="polite"></div>
+<div id="toast" class="toast" role="status"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.2/dist/umd/supabase.js"></script>
+<script>
+{
+const SUPABASE_URL = "https://ytrjfjfeyzbzyrefyqgb.supabase.co";
+const SUPABASE_KEY = "sb_publishable_4RgNkgjYq8yuEgB6zh2Kgg_rgMCoXJg";
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: true, storageKey: "ic-prospection" } });
+
+const STAGES = [
+  ["nouveau", "Nouveau"], ["premier_message", "Premier message"], ["reponse", "A répondu"],
+  ["appel_propose", "Appel proposé"], ["appel_reserve", "Appel réservé"], ["client", "Client"], ["perdu", "Pas intéressé"],
+];
+const STAGE = Object.fromEntries(STAGES);
+const KIND = { comment: "Commentaire", reply: "Réponse sous le commentaire", dm_in: "Message reçu", dm_out: "Message envoyé", auto: "Message automatique" };
+
+const S = { session: null, me: null, members: [], contacts: [], todo: [], filter: "all", stageFilter: "", search: "" };
+const app = document.getElementById("app");
+
+// ---------- utilitaires ----------
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const canEdit = () => S.me && ["admin", "setter"].includes(S.me.role);
+const isAdmin = () => S.me && S.me.role === "admin";
+const label = (c) => c ? (c.username ? "@" + c.username : (c.display_name || "Sans nom")) : "";
+const initial = (c) => (c?.username || c?.display_name || "?").replace(/^@/, "").charAt(0).toUpperCase();
+const memberName = (id) => S.members.find((m) => m.user_id === id)?.display_name || "";
+function ago(d) {
+  if (!d) return "";
+  const s = (Date.now() - new Date(d).getTime()) / 1000;
+  if (s < 60) return "à l'instant";
+  if (s < 3600) return `il y a ${Math.floor(s / 60)} min`;
+  if (s < 86400) return `il y a ${Math.floor(s / 3600)} h`;
+  if (s < 7 * 86400) return `il y a ${Math.floor(s / 86400)} j`;
+  return new Date(d).toLocaleDateString("fr-BE", { day: "numeric", month: "short" });
+}
+function toast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg; t.classList.add("show");
+  clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove("show"), 2200);
+}
+async function copy(text) {
+  try { await navigator.clipboard.writeText(text); toast("Pseudo copié : " + text); }
+  catch { toast("Copie impossible, sélectionne le pseudo à la main"); }
+}
+function profileLink(c) {
+  return c.platform === "instagram" && c.username ? `https://instagram.com/${encodeURIComponent(c.username)}` : "";
+}
+const ICON = {
+  today: '<path d="M3 13h5l1.5 3h5l1.5-3h5"/><path d="M5.5 5h13L21 13v6H3v-6z"/>',
+  vocal: '<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>',
+  people: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.5 3.4-5.5 6.5-5.5s5.7 2 6.5 5.5"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M18.5 14.8c1.5.8 2.6 2.6 3 5.2"/>',
+  cal: '<rect x="3.5" y="5" width="17" height="15" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',
+  more: '<path d="M5 20v-7M12 20V5M19 20v-10"/>',
+};
+const svg = (k) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[k]}</svg>`;
+
+// ---------- données ----------
+async function loadAll() {
+  const [m, c, t] = await Promise.all([
+    sb.from("team_members").select("*").order("created_at"),
+    sb.from("contacts").select("*").order("last_activity_at", { ascending: false }).limit(1000),
+    sb.from("interactions").select("*").eq("handled", false).order("created_at", { ascending: false }).limit(300),
+  ]);
+  S.members = m.data || [];
+  S.contacts = c.data || [];
+  S.todo = t.data || [];
+  S.me = S.members.find((x) => x.user_id === S.session?.user?.id && x.active) || null;
+}
+const contactById = (id) => S.contacts.find((c) => c.id === id);
+
+async function logActivity(contactId, action, note) {
+  await sb.from("activity").insert({ contact_id: contactId, actor_id: S.me.user_id, action, note: note || null });
+}
+async function updateContact(id, patch) {
+  const { error } = await sb.from("contacts").update(patch).eq("id", id);
+  if (error) { toast("Erreur : " + error.message); return false; }
+  Object.assign(contactById(id) || {}, patch);
+  return true;
+}
+async function markHandled(contactId) {
+  const { error } = await sb.from("interactions").update({ handled: true, handled_by: S.me.user_id, handled_at: new Date().toISOString() })
+    .eq("contact_id", contactId).eq("handled", false);
+  if (error) return toast("Erreur : " + error.message);
+  S.todo = S.todo.filter((i) => i.contact_id !== contactId);
+  toast("Marqué comme traité");
+  render();
+}
+
+// ---------- écrans ----------
+function nav(active) {
+  const vocals = S.contacts.filter((c) => c.needs_vocal && !c.do_not_contact).length;
+  const tabs = [
+    ["aujourdhui", "Aujourd'hui", "today", groups().length],
+    ["vocaux", "Vocaux", "vocal", vocals],
+    ["prospects", "Prospects", "people", 0],
+    ["rdv", "Rendez-vous", "cal", 0],
+    ["plus", isAdmin() ? "Équipe" : "Chiffres", "more", 0],
+  ];
+  return `<nav class="tabs" aria-label="Navigation">${tabs.map(([h, l, i, n]) =>
+    `<a href="#${h}" ${active === h ? 'aria-current="page"' : ""}>${svg(i)}${n ? `<span class="badge">${n}</span>` : ""}${esc(l)}</a>`).join("")}</nav>`;
+}
+
+function header(kicker, title, sub) {
+  return `<div class="head"><div><div class="kicker">${esc(kicker)}</div><h1>${esc(title)}</h1>${sub ? `<p class="sub">${esc(sub)}</p>` : ""}</div>
+  <button class="avatar" data-act="logout" aria-label="Se déconnecter (${esc(S.me?.display_name)})" title="Se déconnecter">${esc((S.me?.display_name || "?").charAt(0))}</button></div>`;
+}
+
+function groups() {
+  const map = new Map();
+  for (const i of S.todo) {
+    const c = contactById(i.contact_id);
+    if (!c || c.do_not_contact) continue;
+    if (S.filter !== "all" && c.platform !== S.filter) continue;
+    if (!map.has(c.id)) map.set(c.id, { c, items: [] });
+    map.get(c.id).items.push(i);
+  }
+  return [...map.values()];
+}
+
+function seg() {
+  return `<div class="seg" role="group" aria-label="Plateforme">${[["all", "Tout"], ["instagram", "Instagram"], ["facebook", "Facebook"]].map(([k, l]) =>
+    `<button data-act="filter" data-v="${k}" aria-pressed="${S.filter === k}">${l}</button>`).join("")}</div>`;
+}
+
+function contactRow(c, text, time, extra = "") {
+  const owner = c.owner_id ? memberName(c.owner_id) : "";
+  return `<div class="row">
+    <span class="ini" aria-hidden="true">${esc(initial(c))}</span>
+    <div class="grow">
+      <div class="line1"><a class="name" href="#p-${c.id}">${esc(label(c))}</a><span class="plat ${c.platform}">${c.platform === "instagram" ? "Instagram" : "Facebook"}</span><span class="time">${esc(ago(time))}</span></div>
+      ${text ? `<p class="text">${esc(text)}</p>` : ""}
+      <div class="chips"><span class="chip grey">${esc(STAGE[c.stage] || c.stage)}</span>${owner ? `<span class="chip blue">${esc(owner)}</span>` : ""}</div>
+      ${extra}
+    </div></div>`;
+}
+
+function viewToday() {
+  const mine = S.contacts.filter((c) => c.transfer_note && c.owner_id === S.me.user_id);
+  const vocals = S.contacts.filter((c) => c.needs_vocal && !c.do_not_contact);
+  const g = groups();
+  const date = new Date().toLocaleDateString("fr-BE", { weekday: "long", day: "numeric", month: "long" });
+  return `<main class="wrap">${header(date, "Aujourd'hui.", `${g.length} à traiter · ${vocals.length} vocaux à envoyer`)}
+  ${seg()}
+  ${mine.length ? `<div class="section"><h2>Transférés à toi</h2><span class="muted">${mine.length}</span></div><div class="card">${mine.map((c) =>
+    contactRow(c, "", c.last_activity_at, `<div class="transfer">${esc(c.transfer_note)}</div><div class="btns"><a class="btn small" href="#p-${c.id}">Ouvrir</a>${c.username ? `<button class="btn small" data-act="copy" data-v="${esc(c.username)}">Copier le pseudo</button>` : ""}<button class="btn small" data-act="seen" data-id="${c.id}">Vu</button></div>`)).join("")}</div>` : ""}
+  ${vocals.length && isAdmin() ? `<div class="section"></div><section class="vocal"><div class="kicker">Pour toi · Instagram</div><h2>${vocals.length} vocal${vocals.length > 1 ? "s" : ""} à envoyer.</h2>${vocals.slice(0, 3).map(vRow).join("")}${vocals.length > 3 ? `<div class="vrow"><a class="vbtn" href="#vocaux" style="display:inline-flex;align-items:center;text-decoration:none">Voir les ${vocals.length}</a></div>` : ""}</section>` : ""}
+  <div class="section"><h2>À traiter</h2><span class="muted">${g.length}</span></div>
+  <div class="card">${g.length ? g.map(({ c, items }) => contactRow(c, items[0].text + (items.length > 1 ? ` (+${items.length - 1})` : ""), items[0].created_at,
+    `<div class="chips"><span class="chip">${esc(KIND[items[0].kind] || "")}</span></div><div class="btns">${c.username ? `<button class="btn small" data-act="copy" data-v="${esc(c.username)}">Copier le pseudo</button>` : ""}<a class="btn small" href="#p-${c.id}">Ouvrir</a>${canEdit() ? `<button class="btn small primary" data-act="done" data-id="${c.id}">Traité</button>` : ""}</div>`)).join("") : `<div class="empty">Rien à traiter pour l'instant.</div>`}</div>
+  </main>${nav("aujourdhui")}`;
+}
+
+function vRow(c) {
+  return `<div class="vrow"><div class="who"><b>${esc(label(c))}</b><span>${esc(c.vocal_reason || "")} · ${esc(ago(c.last_activity_at))}</span></div>
+  ${c.username ? `<button class="vbtn" data-act="copy" data-v="${esc(c.username)}">Copier</button>` : ""}
+  ${canEdit() ? `<button class="vbtn fill" data-act="vocal-done" data-id="${c.id}">Envoyé</button>` : ""}</div>`;
+}
+
+function viewVocals() {
+  const vocals = S.contacts.filter((c) => c.needs_vocal && !c.do_not_contact);
+  return `<main class="wrap">${header("Instagram", "Vocaux.", "Copie le pseudo, envoie ton vocal sur Insta, puis touche Envoyé.")}
+  <section class="vocal">${vocals.length ? vocals.map(vRow).join("") : `<p style="margin:6px 0 12px;color:#c9d8cd">Aucun vocal en attente.</p>`}</section>
+  </main>${nav("vocaux")}`;
+}
+
+function viewProspects() {
+  const q = S.search.trim().toLowerCase();
+  const list = S.contacts.filter((c) => (!S.stageFilter || c.stage === S.stageFilter) && (!q || label(c).toLowerCase().includes(q) || (c.display_name || "").toLowerCase().includes(q)) && (S.filter === "all" || c.platform === S.filter));
+  return `<main class="wrap">${header(`${S.contacts.length} personnes`, "Prospects.", "")}
+  ${seg()}
+  <label for="search" class="sr" style="position:absolute;left:-9999px">Rechercher</label>
+  <input id="search" type="search" placeholder="Rechercher un pseudo ou un nom" value="${esc(S.search)}" data-act="search" style="margin-bottom:12px">
+  <div class="stages" role="group" aria-label="Étape"><button data-act="stagef" data-v="" aria-pressed="${!S.stageFilter}">Toutes</button>${STAGES.map(([k, l]) => `<button data-act="stagef" data-v="${k}" aria-pressed="${S.stageFilter === k}">${l} · ${S.contacts.filter((c) => c.stage === k).length}</button>`).join("")}</div>
+  <div class="card">${list.length ? list.map((c) => contactRow(c, c.notes ? c.notes.slice(0, 120) : "", c.last_activity_at, c.do_not_contact ? `<div class="chips"><span class="chip warm">Ne pas contacter</span></div>` : "")).join("") : `<div class="empty">Personne ne correspond.</div>`}</div>
+  </main>${nav("prospects")}`;
+}
+
+async function viewContact(id) {
+  const c = contactById(id);
+  if (!c) return `<main class="wrap"><a class="back" href="#prospects">‹ Prospects</a><div class="empty">Prospect introuvable.</div></main>${nav("prospects")}`;
+  const [i, a] = await Promise.all([
+    sb.from("interactions").select("*").eq("contact_id", id).order("created_at", { ascending: false }).limit(100),
+    sb.from("activity").select("*").eq("contact_id", id).order("created_at", { ascending: false }).limit(100),
+  ]);
+  const events = [
+    ...(i.data || []).map((x) => ({ at: x.created_at, out: ["dm_out", "auto", "reply"].includes(x.kind), meta: KIND[x.kind] || x.kind, text: x.text })),
+    ...(a.data || []).map((x) => ({ at: x.created_at, out: true, meta: `${memberName(x.actor_id) || "Équipe"} · ${x.action}`, text: x.note })),
+  ].sort((p, q) => new Date(q.at) - new Date(p.at));
+  const link = profileLink(c);
+  const others = S.members.filter((m) => m.active && m.user_id !== S.me.user_id);
+  const ed = canEdit();
+  return `<main class="wrap">
+  <a class="back" href="#prospects">‹ Prospects</a>
+  <div class="head" style="align-items:center"><div style="display:flex;gap:14px;align-items:center"><span class="ini" style="width:56px;height:56px;font-size:26px" aria-hidden="true">${esc(initial(c))}</span>
+  <div><h1 style="font-size:28px;font-style:normal">${esc(c.display_name || label(c))}</h1><p class="sub" style="margin:2px 0 0">${esc(label(c))} · ${c.platform === "instagram" ? "Instagram" : "Facebook"}</p></div></div></div>
+  <div class="btns" style="margin:0 0 16px">${c.username ? `<button class="btn" data-act="copy" data-v="${esc(c.username)}">Copier le pseudo</button>` : ""}${link ? `<a class="btn" href="${link}" target="_blank" rel="noopener">Ouvrir le profil</a>` : ""}</div>
+  ${c.transfer_note ? `<div class="transfer" style="margin-bottom:14px"><b>Transféré à ${esc(memberName(c.owner_id))} :</b> ${esc(c.transfer_note)}</div>` : ""}
+  <div class="kicker" style="margin:4px 0 8px">Étape du parcours</div>
+  <div class="stages" role="group" aria-label="Étape">${STAGES.map(([k, l]) => `<button ${ed ? "" : "disabled"} data-act="stage" data-id="${c.id}" data-v="${k}" aria-pressed="${c.stage === k}">${l}</button>`).join("")}</div>
+  <div class="split">
+    <div><label for="owner">Responsable</label><select id="owner" ${ed ? "" : "disabled"} data-act="owner" data-id="${c.id}"><option value="">Personne</option>${S.members.filter((m) => m.active).map((m) => `<option value="${m.user_id}" ${c.owner_id === m.user_id ? "selected" : ""}>${esc(m.display_name)}</option>`).join("")}</select></div>
+    <div><label for="dnc">Contact</label><select id="dnc" ${ed ? "" : "disabled"} data-act="dnc" data-id="${c.id}"><option value="0" ${!c.do_not_contact ? "selected" : ""}>À prospecter</option><option value="1" ${c.do_not_contact ? "selected" : ""}>Ne pas contacter</option></select></div>
+  </div>
+  ${ed ? `<div class="btns" style="margin-top:14px">${others.map((m) => `<button class="btn primary" data-act="transfer" data-id="${c.id}" data-to="${m.user_id}">Transférer à ${esc(m.display_name)}</button>`).join("")}${c.needs_vocal ? "" : `<button class="btn" data-act="to-vocal" data-id="${c.id}">Ajouter aux vocaux</button>`}</div>` : ""}
+  <label for="notes">Notes</label>
+  <textarea id="notes" ${ed ? "" : "disabled"} placeholder="Objectif, obstacle, ce qu'elle a dit…">${esc(c.notes || "")}</textarea>
+  ${ed ? `<div class="btns"><button class="btn small" data-act="notes" data-id="${c.id}">Enregistrer la note</button></div>` : ""}
+  <div class="section"><h2>Historique</h2><span class="muted">${events.length}</span></div>
+  <div class="card" style="padding:6px 16px">${events.length ? `<div class="tl">${events.map((e) => `<div class="ev ${e.out ? "out" : ""}"><div class="meta">${esc(e.meta)} · ${esc(ago(e.at))}</div>${e.text ? `<p>${esc(e.text)}</p>` : ""}</div>`).join("")}</div>` : `<div class="empty">Pas encore d'historique.</div>`}</div>
+  </main>${nav("prospects")}`;
+}
+
+function viewRdv() {
+  return `<main class="wrap">${header("Calendly", "Rendez-vous.", "")}
+  <div class="card"><div class="empty">Cet écran affichera les appels réservés sur ton Calendly, reliés au bon prospect. Il sera branché à l'étape suivante.</div></div>
+  </main>${nav("rdv")}`;
+}
+
+function viewStats() {
+  const total = S.contacts.length || 1;
+  const week = Date.now() - 7 * 86400000;
+  const newWeek = S.contacts.filter((c) => new Date(c.first_seen_at).getTime() > week).length;
+  const k = (s) => S.contacts.filter((c) => c.stage === s).length;
+  return `<main class="wrap">${header("Vue d'ensemble", "Chiffres.", "")}
+  <div class="kpis">
+    <div class="kpi"><span>Nouveaux cette semaine</span><b>${newWeek}</b></div>
+    <div class="kpi"><span>Vocaux en attente</span><b>${S.contacts.filter((c) => c.needs_vocal).length}</b></div>
+    <div class="kpi"><span>Appels réservés</span><b>${k("appel_reserve")}</b></div>
+    <div class="kpi"><span>Clients</span><b>${k("client")}</b></div>
+  </div>
+  <div class="section"><h2>Parcours</h2></div>
+  <div class="card" style="padding:8px 18px 16px">${STAGES.map(([s, l]) => `<div style="margin-top:10px"><div style="display:flex;justify-content:space-between;font-size:14px"><span>${l}</span><b>${k(s)}</b></div><div class="bar"><i style="width:${Math.max(2, Math.round(k(s) / total * 100))}%"></i></div></div>`).join("")}</div>
+  </main>`;
+}
+
+function viewTeam() {
+  return `<main class="wrap">${header("Accès", "Équipe.", "Ajoute une personne, choisis son rôle, coupe son accès quand tu veux.")}
+  <div class="card">${S.members.map((m) => `<div class="row"><span class="ini" aria-hidden="true">${esc(m.display_name.charAt(0))}</span><div class="grow">
+    <div class="line1"><span class="name">${esc(m.display_name)}</span>${m.active ? "" : `<span class="chip warm">Accès coupé</span>`}</div><span class="muted">${esc(m.email)}</span>
+    ${m.user_id === S.me.user_id ? `<div class="chips"><span class="chip">Toi · administrateur</span></div>` : `<div class="split" style="margin-top:8px">
+      <select data-act="role" data-id="${m.user_id}" aria-label="Rôle de ${esc(m.display_name)}">${[["admin", "Administrateur"], ["setter", "Setter"], ["lecture", "Lecture seule"]].map(([v, l]) => `<option value="${v}" ${m.role === v ? "selected" : ""}>${l}</option>`).join("")}</select>
+      <button class="btn" data-act="active" data-id="${m.user_id}" data-v="${m.active ? "0" : "1"}">${m.active ? "Couper l'accès" : "Rétablir l'accès"}</button></div>
+      <div class="btns"><button class="btn small" data-act="pwd" data-id="${m.user_id}">Nouveau mot de passe</button></div>`}
+  </div></div>`).join("")}</div>
+  <div class="section"><h2>Ajouter une personne</h2></div>
+  <form class="card" style="padding:4px 18px 18px" data-form="invite">
+    <label for="i-name">Prénom</label><input id="i-name" type="text" required autocomplete="off">
+    <label for="i-email">Email</label><input id="i-email" type="email" required autocomplete="off">
+    <label for="i-pwd">Mot de passe provisoire (8 caractères minimum)</label><input id="i-pwd" type="text" required minlength="8" autocomplete="off">
+    <label for="i-role">Rôle</label><select id="i-role"><option value="setter">Setter : voit et traite les prospects</option><option value="lecture">Lecture seule</option><option value="admin">Administrateur : tout, y compris l'équipe</option></select>
+    <div class="btns" style="margin-top:16px"><button class="btn primary" type="submit">Ajouter</button></div>
+    <p class="muted" style="margin:10px 0 0">Donne-lui ensuite l'adresse de l'app, son email et ce mot de passe.</p>
+  </form>
+  ${viewStats().replace('<main class="wrap">', '<div>').replace(/<\/main>$/, "</div>").replace(/<div class="head">[\s\S]*?<\/button><\/div>/, '<div class="section" style="margin-top:32px"><h2>Chiffres</h2></div>')}
+  </main>${nav("plus")}`;
+}
+
+function viewLogin(needsSetup, error) {
+  return `<main class="login">
+  <div class="kicker">Inner Clarity</div><h1>Prospection.</h1>
+  <p class="sub">${needsSetup ? "Première connexion : crée le compte administrateur." : "Connecte-toi avec ton email et ton mot de passe."}</p>
+  <form data-form="${needsSetup ? "bootstrap" : "login"}" style="margin-top:18px">
+    ${needsSetup ? `<label for="l-name">Prénom</label><input id="l-name" type="text" required autocomplete="given-name">` : ""}
+    <label for="l-email">Email</label><input id="l-email" type="email" required autocomplete="email">
+    <label for="l-pwd">Mot de passe${needsSetup ? " (8 caractères minimum)" : ""}</label><input id="l-pwd" type="password" required minlength="${needsSetup ? 8 : 1}" autocomplete="${needsSetup ? "new-password" : "current-password"}">
+    <div class="btns" style="margin-top:18px"><button class="btn primary" type="submit">${needsSetup ? "Créer mon compte" : "Se connecter"}</button></div>
+    ${error ? `<p class="err">${esc(error)}</p>` : ""}
+  </form></main>`;
+}
+
+// ---------- rendu ----------
+async function render() {
+  const h = location.hash.replace("#", "") || "aujourdhui";
+  if (!S.session) {
+    const { data } = await sb.functions.invoke("team", { body: { action: "status" } });
+    app.innerHTML = viewLogin(!!data?.needsSetup);
+    return;
+  }
+  if (!S.me) {
+    app.innerHTML = `<main class="login"><div class="kicker">Inner Clarity</div><h1>Accès en attente.</h1><p class="sub">Ton compte n'a pas (ou plus) accès à l'app. Demande à Robin.</p><div class="btns"><button class="btn" data-act="logout">Se déconnecter</button></div></main>`;
+    return;
+  }
+  let html;
+  if (h.startsWith("p-")) html = await viewContact(h.slice(2));
+  else if (h === "vocaux") html = viewVocals();
+  else if (h === "prospects") html = viewProspects();
+  else if (h === "rdv") html = viewRdv();
+  else if (h === "plus") html = isAdmin() ? viewTeam() : viewStats() + nav("plus");
+  else html = viewToday();
+  const y = window.scrollY, keepScroll = render._last === h;
+  app.innerHTML = html;
+  render._last = h;
+  if (keepScroll) window.scrollTo(0, y);
+}
+
+async function refresh() {
+  if (!S.session) return render();
+  await loadAll();
+  await render();
+}
+
+// ---------- actions ----------
+app.addEventListener("click", async (e) => {
+  const b = e.target.closest("[data-act]");
+  if (!b || b.tagName === "SELECT" || b.tagName === "INPUT") return;
+  const act = b.dataset.act, id = b.dataset.id, v = b.dataset.v;
+  if (act === "copy") return copy(v);
+  if (act === "filter") { S.filter = v; return render(); }
+  if (act === "stagef") { S.stageFilter = v; return render(); }
+  if (act === "logout") {
+    if (S.me) return dialog(`<h2>Se déconnecter ?</h2><p class="sub">Connecté en tant que ${esc(S.me.display_name)}.</p>`, logout);
+    return logout();
+  }
+  if (!canEdit()) return;
+  b.disabled = true;
+  if (act === "done") return markHandled(id);
+  if (act === "seen") { await updateContact(id, { transfer_note: null }); return render(); }
+  if (act === "vocal-done") {
+    if (await updateContact(id, { needs_vocal: false, stage: ["nouveau"].includes(contactById(id)?.stage) ? "premier_message" : contactById(id)?.stage })) {
+      await logActivity(id, "vocal envoyé"); toast("Vocal noté comme envoyé"); render();
+    }
+    return;
+  }
+  if (act === "to-vocal") { if (await updateContact(id, { needs_vocal: true, vocal_reason: "Ajouté par " + S.me.display_name })) { toast("Ajouté aux vocaux"); render(); } return; }
+  if (act === "stage") { if (await updateContact(id, { stage: v })) { await logActivity(id, "étape : " + STAGE[v]); render(); } return; }
+  if (act === "notes") {
+    const notes = document.getElementById("notes").value;
+    if (await updateContact(id, { notes })) { toast("Note enregistrée"); b.disabled = false; }
+    return;
+  }
+  if (act === "transfer") return openTransfer(id, b.dataset.to);
+  if (act === "active") return teamCall({ action: "update", user_id: id, active: v === "1" }, v === "1" ? "Accès rétabli" : "Accès coupé");
+  if (act === "pwd") return openPassword(id);
+});
+
+app.addEventListener("change", async (e) => {
+  const el = e.target.closest("[data-act]");
+  if (!el) return;
+  const act = el.dataset.act, id = el.dataset.id;
+  if (act === "owner") { if (await updateContact(id, { owner_id: el.value || null })) { await logActivity(id, "responsable : " + (memberName(el.value) || "personne")); toast("Responsable mis à jour"); } }
+  if (act === "dnc") { if (await updateContact(id, { do_not_contact: el.value === "1" })) toast(el.value === "1" ? "Ne sera plus proposé" : "De nouveau à prospecter"); }
+  if (act === "role") teamCall({ action: "update", user_id: id, role: el.value }, "Rôle mis à jour");
+});
+
+app.addEventListener("input", (e) => {
+  if (e.target.dataset.act === "search") {
+    S.search = e.target.value;
+    const pos = e.target.selectionStart;
+    render().then(() => { const s = document.getElementById("search"); if (s) { s.focus(); s.setSelectionRange(pos, pos); } });
+  }
+});
+
+app.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const f = e.target, kind = f.dataset.form, btn = f.querySelector("button[type=submit]");
+  btn.disabled = true;
+  if (kind === "login" || kind === "bootstrap") {
+    const email = document.getElementById("l-email").value.trim(), password = document.getElementById("l-pwd").value;
+    if (kind === "bootstrap") {
+      const { data, error } = await sb.functions.invoke("team", { body: { action: "bootstrap", email, password, display_name: document.getElementById("l-name").value } });
+      const msg = data?.error || (error && (await error.context?.json?.().catch(() => null))?.error) || (error ? "Création impossible." : "");
+      if (msg) { app.innerHTML = viewLogin(true, msg); return; }
+    }
+    const { data, error } = await sb.auth.signInWithPassword({ email, password });
+    if (error) { app.innerHTML = viewLogin(false, "Email ou mot de passe incorrect."); return; }
+    S.session = data.session;
+    return refresh();
+  }
+  if (kind === "invite") {
+    await teamCall({
+      action: "invite", display_name: document.getElementById("i-name").value, email: document.getElementById("i-email").value,
+      password: document.getElementById("i-pwd").value, role: document.getElementById("i-role").value,
+    }, "Personne ajoutée");
+  }
+});
+
+async function logout() { await sb.auth.signOut(); S.session = null; S.me = null; location.hash = ""; render(); }
+
+async function teamCall(body, ok) {
+  const { data, error } = await sb.functions.invoke("team", { body });
+  let msg = data?.error;
+  if (!msg && error) msg = (await error.context?.json?.().catch(() => null))?.error || "Action impossible.";
+  if (msg) { toast(msg); return render(); }
+  toast(ok); return refresh();
+}
+
+function dialog(html, onSubmit) {
+  const d = document.createElement("div");
+  d.className = "dialog";
+  d.innerHTML = `<form class="sheet">${html}<div class="btns" style="margin-top:16px"><button class="btn primary" type="submit">Valider</button><button class="btn" type="button" data-close>Annuler</button></div></form>`;
+  document.body.appendChild(d);
+  const close = () => d.remove();
+  d.addEventListener("click", (e) => { if (e.target === d || e.target.closest("[data-close]")) close(); });
+  d.querySelector("form").addEventListener("submit", async (e) => { e.preventDefault(); await onSubmit(d); close(); });
+  setTimeout(() => d.querySelector("textarea,input")?.focus(), 30);
+}
+
+function openTransfer(id, to) {
+  const c = contactById(id), name = memberName(to);
+  dialog(`<h2>Transférer ${esc(label(c))} à ${esc(name)}</h2><label for="t-note">Un mot pour ${esc(name)}</label><textarea id="t-note" placeholder="Ex. : elle hésite sur le prix, propose-lui l'appel"></textarea>`, async (d) => {
+    const note = d.querySelector("#t-note").value.trim() || "À voir";
+    if (await updateContact(id, { owner_id: to, transfer_note: `${S.me.display_name} : ${note}` })) {
+      await logActivity(id, "transféré à " + name, note);
+      toast("Transféré à " + name); render();
+    }
+  });
+}
+
+function openPassword(id) {
+  dialog(`<h2>Nouveau mot de passe pour ${esc(memberName(id))}</h2><label for="p-new">Mot de passe (8 caractères minimum)</label><input id="p-new" type="text" minlength="8" required autocomplete="off">`, async (d) => {
+    await teamCall({ action: "reset_password", user_id: id, password: d.querySelector("#p-new").value }, "Mot de passe changé");
+  });
+}
+
+// ---------- démarrage ----------
+window.addEventListener("hashchange", render);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) refresh(); });
+setInterval(() => { if (!document.hidden && !document.querySelector(".dialog") && document.activeElement?.tagName !== "TEXTAREA" && document.activeElement?.tagName !== "INPUT") refresh(); }, 60000);
+sb.auth.onAuthStateChange((_e, session) => { S.session = session; });
+sb.auth.getSession().then(({ data }) => { S.session = data.session; refresh(); });
+}
+</script>
+</body>
+</html>
