@@ -93,6 +93,28 @@ nav.tabs svg{width:24px;height:24px}
 .split{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}
 .dialog{position:fixed;inset:0;background:rgba(14,35,28,.35);display:flex;align-items:flex-end;justify-content:center;z-index:30;padding:12px}
 .sheet{background:#fff;border-radius:24px;padding:20px;width:100%;max-width:480px;margin-bottom:env(safe-area-inset-bottom)}
+.auto{padding:18px 18px 8px;margin-bottom:14px}
+.auto-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.kw{font:italic 400 30px/1.1 var(--serif);color:var(--forest);margin:2px 0 0;letter-spacing:-.01em}
+.modes{display:flex;flex-direction:column;gap:4px;margin:10px 0 12px;font-size:14px;color:var(--ink2)}
+.modes .plat{display:inline-block;min-width:78px}
+.minis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:6px}
+.mini{background:var(--cream);border-radius:16px;padding:10px 12px}
+.mini b{display:block;font:400 26px/1.1 var(--serif);color:var(--forest)}
+.mini span{font-size:12px;color:var(--ink4);font-weight:600}
+.frow{margin-top:10px}
+.frow .top{display:flex;justify-content:space-between;gap:8px;font-size:14px}
+.frow .top em{font-style:normal;color:var(--ink4);font-size:12.5px;margin-left:6px}
+details.msgs{border-top:1px solid var(--line);margin-top:14px}
+details.msgs summary{cursor:pointer;list-style:none;padding:12px 0;font-weight:600;font-size:14px;color:var(--forest)}
+details.msgs summary::-webkit-details-marker{display:none}
+details.msgs summary:after{content:" ›";}
+details.msgs[open] summary:after{content:" ⌄";}
+.mlabel{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--sage);margin:12px 0 6px}
+.bubble{background:var(--sage-tint);border-radius:16px 16px 16px 4px;padding:10px 12px;font-size:14px;line-height:1.45;color:var(--ink);margin:0 0 6px;overflow-wrap:anywhere}
+.qbtn{display:inline-block;border:1.5px solid var(--sage);color:var(--forest);border-radius:999px;padding:4px 12px;font-size:13px;font-weight:600;margin:0 0 8px}
+.ph{background:#fff;border:1px dashed var(--sage-light);border-radius:6px;padding:0 4px;color:var(--sage);font-weight:600}
+.note{font-size:13px;color:var(--ink4);margin:4px 2px 18px}
 @media(min-width:900px){
   nav.tabs{top:0;bottom:0;right:auto;width:96px;grid-template-columns:1fr;grid-auto-rows:72px;align-content:start;padding-top:28px;border-top:0;border-right:1px solid var(--line)}
   .wrap{padding-left:120px;max-width:900px}
@@ -103,7 +125,7 @@ nav.tabs svg{width:24px;height:24px}
 </style>
 </head>
 <body>
-<div id="app" aria-live="polite"></div>
+<div id="app" aria-live="polite"><main class="login"><div class="kicker">Inner Clarity</div><h1>Prospection.</h1><p class="sub">Chargement…</p></main></div>
 <div id="toast" class="toast" role="status"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.2/dist/umd/supabase.js"></script>
@@ -120,7 +142,7 @@ const STAGES = [
 const STAGE = Object.fromEntries(STAGES);
 const KIND = { comment: "Commentaire", reply: "Réponse sous le commentaire", dm_in: "Message reçu", dm_out: "Message envoyé", auto: "Message automatique" };
 
-const S = { session: null, me: null, members: [], contacts: [], todo: [], filter: "all", stageFilter: "", search: "" };
+const S = { session: null, me: null, members: [], contacts: [], todo: [], autos: [], events: [], filter: "all", stageFilter: "", search: "", plusTab: "auto", period: 30 };
 const app = document.getElementById("app");
 
 // ---------- utilitaires ----------
@@ -162,14 +184,18 @@ const svg = (k) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" s
 
 // ---------- données ----------
 async function loadAll() {
-  const [m, c, t] = await Promise.all([
+  const [m, c, t, a, e] = await Promise.all([
     sb.from("team_members").select("*").order("created_at"),
-    sb.from("contacts").select("*").order("last_activity_at", { ascending: false }).limit(1000),
+    sb.from("contacts").select("*").order("last_activity_at", { ascending: false }).limit(2000),
     sb.from("interactions").select("*").eq("handled", false).order("created_at", { ascending: false }).limit(300),
+    sb.from("automations").select("*").order("sort"),
+    sb.from("automation_events").select("keyword,contact_id,platform,event,ok,created_at").order("created_at", { ascending: false }).limit(10000),
   ]);
   S.members = m.data || [];
   S.contacts = c.data || [];
   S.todo = t.data || [];
+  S.autos = a.data || [];
+  S.events = e.data || [];
   S.me = S.members.find((x) => x.user_id === S.session?.user?.id && x.active) || null;
 }
 const contactById = (id) => S.contacts.find((c) => c.id === id);
@@ -200,7 +226,7 @@ function nav(active) {
     ["vocaux", "Vocaux", "vocal", vocals],
     ["prospects", "Prospects", "people", 0],
     ["rdv", "Rendez-vous", "cal", 0],
-    ["plus", isAdmin() ? "Équipe" : "Chiffres", "more", 0],
+    ["plus", "Plus", "more", 0],
   ];
   return `<nav class="tabs" aria-label="Navigation">${tabs.map(([h, l, i, n]) =>
     `<a href="#${h}" ${active === h ? 'aria-current="page"' : ""}>${svg(i)}${n ? `<span class="badge">${n}</span>` : ""}${esc(l)}</a>`).join("")}</nav>`;
@@ -340,7 +366,7 @@ function viewStats() {
 }
 
 function viewTeam() {
-  return `<main class="wrap">${header("Accès", "Équipe.", "Ajoute une personne, choisis son rôle, coupe son accès quand tu veux.")}
+  return `<p class="sub" style="margin:0 4px 12px">Ajoute une personne, choisis son rôle, coupe son accès quand tu veux.</p>
   <div class="card">${S.members.map((m) => `<div class="row"><span class="ini" aria-hidden="true">${esc(m.display_name.charAt(0))}</span><div class="grow">
     <div class="line1"><span class="name">${esc(m.display_name)}</span>${m.active ? "" : `<span class="chip warm">Accès coupé</span>`}</div><span class="muted">${esc(m.email)}</span>
     ${m.user_id === S.me.user_id ? `<div class="chips"><span class="chip">Toi · administrateur</span></div>` : `<div class="split" style="margin-top:8px">
@@ -357,8 +383,91 @@ function viewTeam() {
     <div class="btns" style="margin-top:16px"><button class="btn primary" type="submit">Ajouter</button></div>
     <p class="muted" style="margin:10px 0 0">Donne-lui ensuite l'adresse de l'app, son email et ce mot de passe.</p>
   </form>
-  ${viewStats().replace('<main class="wrap">', '<div>').replace(/<\/main>$/, "</div>").replace(/<div class="head">[\s\S]*?<\/button><\/div>/, '<div class="section" style="margin-top:32px"><h2>Chiffres</h2></div>')}
-  </main>${nav("plus")}`;
+  `;
+}
+
+
+const MODE = {
+  ressource: { instagram: "Bouton « abonné », puis le lien", facebook: "Bouton, puis le lien" },
+  question: { instagram: "Question en privé", facebook: "Question en privé, Claude s'en occupe" },
+  vocal: { instagram: "Vocal pour Robin", facebook: "Vocal pour Robin" },
+  off: { instagram: "Rien", facebook: "Rien" },
+};
+
+function autoStats(a) {
+  const since = S.period ? Date.now() - S.period * 86400000 : 0;
+  const ev = S.events.filter((e) => e.keyword === a.keyword && e.ok && new Date(e.created_at).getTime() >= since && (S.filter === "all" || e.platform === S.filter));
+  const people = (type) => new Set(ev.filter((e) => e.event === type).map((e) => e.contact_id));
+  const trig = people("trigger");
+  const reacted = new Set([...people("click"), ...people("reply")]);
+  const inTrig = (fn) => [...trig].filter((id) => { const c = contactById(id); return c && fn(c); }).length;
+  const vocalTrig = ev.filter((e) => e.event === "trigger" && (e.platform === "instagram" ? a.mode_instagram : a.mode_facebook) === "vocal").map((e) => e.contact_id);
+  return {
+    trig: trig.size, dm: people("dm").size, click: people("click").size, res: people("resource").size,
+    rep: people("reply").size, rel: people("relance").size, fu: people("followup").size, reacted: reacted.size,
+    vocalTodo: new Set(vocalTrig).size, vocalDone: [...new Set(vocalTrig)].filter((id) => contactById(id) && !contactById(id).needs_vocal).length,
+    calls: inTrig((c) => ["appel_reserve", "client"].includes(c.stage)), clients: inTrig((c) => c.stage === "client"),
+  };
+}
+
+const pct = (n, d) => (d ? Math.round((n / d) * 100) + " %" : "");
+const tpl = (t, a) => esc(t || "").replaceAll("{prenom}", '<span class="ph">prénom</span>').replaceAll("{lien}", esc(a.resource_url || ""));
+
+function autoCard(a) {
+  const st = autoStats(a);
+  const modes = [a.mode_instagram, a.mode_facebook];
+  const has = (m) => modes.includes(m);
+  const rows = [["Commentaires", st.trig]];
+  if (has("ressource") || has("question")) rows.push(["Messages privés envoyés", st.dm]);
+  if (has("ressource")) rows.push(["Ont cliqué sur le bouton", st.click], ["Liens envoyés", st.res], ["Messages de suivi", st.fu]);
+  if (has("question")) rows.push(["Ont répondu en privé", st.rep]);
+  if (has("ressource") || has("question")) rows.push(["Relances publiques", st.rel]);
+  if (has("vocal")) rows.push(["Vocaux envoyés", st.vocalDone]);
+  rows.push(["Appels réservés", st.calls], ["Clients", st.clients]);
+  const max = Math.max(1, st.trig);
+  const msg = [];
+  if (has("question")) msg.push(`<div class="mlabel">Message privé${a.mode_facebook === "question" && a.mode_instagram !== "question" ? " · Facebook" : ""}</div><p class="bubble">${tpl(a.question_text, a)}</p>`);
+  if (a.mode_instagram === "ressource") msg.push(`<div class="mlabel">Message privé · Instagram</div><p class="bubble">${tpl(a.welcome_instagram, a)}</p><span class="qbtn">${esc(a.button_instagram || "")}</span>`);
+  if (a.mode_facebook === "ressource") msg.push(`<div class="mlabel">Message privé · Facebook</div><p class="bubble">${tpl(a.welcome_facebook, a)}</p><span class="qbtn">${esc(a.button_facebook || "")}</span>`);
+  if (a.mode_instagram === "ressource" && a.not_following_text) msg.push(`<div class="mlabel">Si pas encore abonné (Instagram)</div><p class="bubble">${tpl(a.not_following_text, a)}</p>`);
+  if (has("ressource")) msg.push(`<div class="mlabel">Après le clic</div><p class="bubble">${tpl(a.resource_text, a)}</p>`);
+  if (has("ressource") && a.followup_text) msg.push(`<div class="mlabel">${a.followup_hours} h plus tard</div><p class="bubble">${tpl(a.followup_text, a)}</p>`);
+  if ((has("ressource") || has("question")) && a.public_replies?.length) msg.push(`<div class="mlabel">Réponse publique, une au hasard</div>${a.public_replies.map((r) => `<p class="bubble">${tpl(r, a)}</p>`).join("")}`);
+  if ((has("ressource") || has("question")) && a.relance_replies?.length) msg.push(`<div class="mlabel">Relance publique après ${a.relance_hours} h sans réaction</div>${a.relance_replies.map((r) => `<p class="bubble">${tpl(r, a)}</p>`).join("")}`);
+  return `<section class="card auto">
+    <div class="auto-head"><div><div class="kicker">Mot-clé</div><h2 class="kw">${esc(a.label)}</h2></div><span class="chip ${a.active ? "" : "grey"}">${a.active ? "Actif" : "En pause"}</span></div>
+    <div class="modes"><div><span class="plat instagram">Instagram</span>${esc(MODE[a.mode_instagram]?.instagram || "")}</div><div><span class="plat facebook">Facebook</span>${esc(MODE[a.mode_facebook]?.facebook || "")}</div></div>
+    <div class="minis"><div class="mini"><span>Commentaires</span><b>${st.trig}</b></div><div class="mini"><span>Ont réagi</span><b>${has("vocal") && !has("ressource") && !has("question") ? st.vocalDone : st.reacted}</b></div><div class="mini"><span>Appels</span><b>${st.calls}</b></div></div>
+    ${rows.map(([l, n]) => `<div class="frow"><div class="top"><span>${l}</span><b>${n}<em>${l === "Commentaires" ? "" : pct(n, st.trig)}</em></b></div><div class="bar"><i style="width:${Math.max(2, Math.round((n / max) * 100))}%"></i></div></div>`).join("")}
+    ${msg.length ? `<details class="msgs"><summary>Voir les messages</summary>${msg.join("")}<p class="note"><span class="ph">prénom</span> est remplacé par le prénom sur Facebook. Sur Instagram, la phrase part sans prénom.</p></details>` : ""}
+  </section>`;
+}
+
+function viewAutomations() {
+  const list = S.autos;
+  const since = S.period ? Date.now() - S.period * 86400000 : 0;
+  const ev = S.events.filter((e) => e.ok && new Date(e.created_at).getTime() >= since && (S.filter === "all" || e.platform === S.filter));
+  const n = (t) => ev.filter((e) => e.event === t).length;
+  return `<div class="seg" role="group" aria-label="Période">${[[7, "7 jours"], [30, "30 jours"], [0, "Tout"]].map(([k, l]) => `<button data-act="period" data-v="${k}" aria-pressed="${S.period === k}">${l}</button>`).join("")}</div>
+  ${seg()}
+  <div class="kpis" style="margin-bottom:16px">
+    <div class="kpi"><span>Messages automatiques</span><b>${n("dm") + n("resource") + n("followup")}</b></div>
+    <div class="kpi"><span>Réponses publiques</span><b>${n("public_reply") + n("relance")}</b></div>
+  </div>
+  ${list.length ? list.map(autoCard).join("") : `<div class="card"><div class="empty">Aucune automatisation.</div></div>`}
+  <p class="note">Pour créer ou modifier une automatisation, demande à Claude.</p>`;
+}
+
+function viewPlus() {
+  const tabs = [["auto", "Automatisations"], ["chiffres", "Chiffres"]];
+  if (isAdmin()) tabs.push(["equipe", "Équipe"]);
+  if (!tabs.some(([k]) => k === S.plusTab)) S.plusTab = "auto";
+  const body = S.plusTab === "chiffres"
+    ? viewStats().replace('<main class="wrap">', "").replace(/<\/main>$/, "").replace(/<div class="head">[\s\S]*?<\/button><\/div>/, "")
+    : S.plusTab === "equipe" ? viewTeam() : viewAutomations();
+  return `<main class="wrap">${header("Réglages et résultats", "Plus.", "")}
+  <div class="seg" role="group" aria-label="Section" style="grid-template-columns:repeat(${tabs.length},minmax(0,1fr))">${tabs.map(([k, l]) => `<button data-act="plustab" data-v="${k}" aria-pressed="${S.plusTab === k}">${l}</button>`).join("")}</div>
+  ${body}</main>${nav("plus")}`;
 }
 
 function viewLogin(needsSetup, error) {
@@ -391,7 +500,7 @@ async function render() {
   else if (h === "vocaux") html = viewVocals();
   else if (h === "prospects") html = viewProspects();
   else if (h === "rdv") html = viewRdv();
-  else if (h === "plus") html = isAdmin() ? viewTeam() : viewStats() + nav("plus");
+  else if (h === "plus") html = viewPlus();
   else html = viewToday();
   const y = window.scrollY, keepScroll = render._last === h;
   app.innerHTML = html;
@@ -413,6 +522,8 @@ app.addEventListener("click", async (e) => {
   if (act === "copy") return copy(v);
   if (act === "filter") { S.filter = v; return render(); }
   if (act === "stagef") { S.stageFilter = v; return render(); }
+  if (act === "plustab") { S.plusTab = v; return render(); }
+  if (act === "period") { S.period = Number(v); return render(); }
   if (act === "logout") {
     if (S.me) return dialog(`<h2>Se déconnecter ?</h2><p class="sub">Connecté en tant que ${esc(S.me.display_name)}.</p>`, logout);
     return logout();
