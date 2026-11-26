@@ -80,7 +80,7 @@ label{display:block;font-size:13px;font-weight:600;color:var(--ink3);margin:12px
 .kpi b{display:block;font:400 34px/1.05 var(--serif);color:var(--forest)}
 .kpi span{font-size:13px;color:var(--ink4);font-weight:600}
 .bar{height:6px;border-radius:999px;background:#f1eee8;overflow:hidden;margin-top:6px}.bar i{display:block;height:100%;background:var(--sage-light);border-radius:999px}
-nav.tabs{position:fixed;left:0;right:0;bottom:0;background:rgba(250,248,244,.95);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border-top:1px solid var(--line);padding:6px 4px calc(env(safe-area-inset-bottom) + 6px);display:grid;grid-template-columns:repeat(5,auto);justify-content:space-around;z-index:10}
+nav.tabs{position:fixed;left:0;right:0;bottom:0;background:rgba(250,248,244,.95);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border-top:1px solid var(--line);padding:6px 4px calc(env(safe-area-inset-bottom) + 6px);display:grid;grid-template-columns:repeat(4,auto);justify-content:space-around;z-index:10}
 nav.tabs a{min-width:48px;padding-left:2px;padding-right:2px;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 0;font-size:11px;font-weight:600;color:var(--ink4);text-decoration:none;position:relative}
 nav.tabs a[aria-current=page]{color:var(--forest)}
 nav.tabs svg{width:24px;height:24px}
@@ -131,7 +131,7 @@ details.msgs[open] summary:after{content:" ⌄";}
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.2/dist/umd/supabase.js"></script>
 <script>
 {
-const APP_VERSION = "2026-11-26.5";
+const APP_VERSION = "2026-11-26.7";
 const SUPABASE_URL = "https://ytrjfjfeyzbzyrefyqgb.supabase.co";
 const SUPABASE_KEY = "sb_publishable_4RgNkgjYq8yuEgB6zh2Kgg_rgMCoXJg";
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: true, storageKey: "ic-prospection" } });
@@ -143,7 +143,7 @@ const STAGES = [
 const STAGE = Object.fromEntries(STAGES);
 const KIND = { comment: "Commentaire", reply: "Réponse sous le commentaire", dm_in: "Message reçu", dm_out: "Message envoyé", auto: "Message automatique" };
 
-const S = { session: null, me: null, members: [], contacts: [], todo: [], autos: [], events: [], drafts: [], source: new Map(), sourceFilter: "", filter: "all", stageFilter: "", search: "", plusTab: "rdv", period: 30 };
+const S = { session: null, me: null, members: [], contacts: [], todo: [], autos: [], events: [], drafts: [], comments: [], media: {}, edits: {}, caseFilter: "", source: new Map(), sourceFilter: "", filter: "all", stageFilter: "", search: "", plusTab: "rdv", period: 30 };
 const app = document.getElementById("app");
 
 // ---------- utilitaires ----------
@@ -185,19 +185,25 @@ const ICON = {
   cal: '<rect x="3.5" y="5" width="17" height="15" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',
   more: '<path d="M5 20v-7M12 20V5M19 20v-10"/>',
   bolt: '<path d="M13 3 5 13.5h6L10 21l8-10.5h-6z"/>',
+  chat: '<path d="M4.5 5h15a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H10l-4.5 3.5V16h-1a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/>',
 };
 const svg = (k) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[k]}</svg>`;
 
 // ---------- données ----------
 async function loadAll() {
-  const [m, c, t, a, e, d] = await Promise.all([
+  const since = new Date(Date.now() - 14 * 86400000).toISOString();
+  const [m, c, t, a, e, d, k, md] = await Promise.all([
     sb.from("team_members").select("*").order("created_at"),
     sb.from("contacts").select("*").order("last_activity_at", { ascending: false }).limit(2000),
     sb.from("interactions").select("*").eq("handled", false).order("created_at", { ascending: false }).limit(300),
     sb.from("automations").select("*").order("sort"),
     sb.from("automation_events").select("keyword,contact_id,platform,event,ok,created_at").order("created_at", { ascending: false }).limit(10000),
-    sb.from("reply_drafts").select("*").in("status", ["a_valider", "valide", "envoi", "echec"]).order("created_at", { ascending: false }).limit(200),
+    sb.from("reply_drafts").select("*").gte("created_at", since).order("created_at", { ascending: false }).limit(1000),
+    sb.from("interactions").select("*").eq("kind", "comment").gte("created_at", since).order("created_at", { ascending: false }).limit(1000),
+    sb.from("media").select("*"),
   ]);
+  S.comments = k.data || [];
+  S.media = Object.fromEntries((md.data || []).map((x) => [x.id, x]));
   S.members = m.data || [];
   S.contacts = c.data || [];
   S.todo = t.data || [];
@@ -238,9 +244,8 @@ async function markHandled(contactId) {
 function nav(active) {
   const vocals = S.contacts.filter((c) => c.needs_vocal && !c.do_not_contact).length;
   const tabs = [
-    ["aujourdhui", "Aujourd'hui", "today", groups().length],
+    ["prospects", "Prospects", "people", dmGroups().length + S.contacts.filter((c) => (c.transfer_note && c.owner_id === S.me?.user_id) || (c.handoff_note && !c.do_not_contact)).length],
     ["vocaux", "Vocaux", "vocal", vocals],
-    ["prospects", "Prospects", "people", 0],
     ["automatisations", "Automatisations", "bolt", 0],
     ["plus", "Plus", "more", 0],
   ];
@@ -253,12 +258,13 @@ function header(kicker, title, sub) {
   <button class="avatar" data-act="logout" aria-label="Se déconnecter (${esc(S.me?.display_name)})" title="Se déconnecter">${esc((S.me?.display_name || "?").charAt(0))}</button></div>`;
 }
 
-function groups() {
+// Messages privés reçus, pas encore traités, regroupés par personne
+function dmGroups() {
   const map = new Map();
   for (const i of S.todo) {
+    if (i.kind !== "dm_in") continue;
     const c = contactById(i.contact_id);
-    if (!c || c.do_not_contact || pendingDraft(i)) continue;
-    if (S.filter !== "all" && c.platform !== S.filter) continue;
+    if (!c || c.do_not_contact) continue;
     if (!map.has(c.id)) map.set(c.id, { c, items: [] });
     map.get(c.id).items.push(i);
   }
@@ -282,47 +288,17 @@ function contactRow(c, text, time, extra = "") {
     </div></div>`;
 }
 
-function viewToday() {
+// Prospects : transferts et messages privés à traiter
+function inboxBlock() {
+  const leo = S.contacts.filter((c) => c.handoff_note && !c.do_not_contact && (S.filter === "all" || c.platform === S.filter));
+  const leoBlock = leo.length ? `<div class="section"><h2>Pour ${esc(setterName())} · à reprendre en privé</h2><span class="muted">${leo.length}</span></div><div class="card">${leo.map((c) =>
+    contactRow(c, "", c.handoff_at || c.last_activity_at, `<div class="transfer">${esc(c.handoff_note)}</div><div class="btns">${c.username ? `<button class="btn small" data-act="copy" data-v="${esc(c.username)}">Copier le pseudo</button>` : ""}${profileLink(c) ? `<a class="btn small" href="${profileLink(c)}" target="_blank" rel="noopener">Profil</a>` : ""}<a class="btn small" href="#p-${c.id}">Ouvrir</a>${canEdit() ? `<button class="btn small primary" data-act="handoff-done" data-id="${c.id}">Pris en charge</button>` : ""}</div>`)).join("")}</div>` : "";
   const mine = S.contacts.filter((c) => c.transfer_note && c.owner_id === S.me.user_id);
-  const vocals = S.contacts.filter((c) => c.needs_vocal && !c.do_not_contact);
-  const g = groups();
-  const date = new Date().toLocaleDateString("fr-BE", { weekday: "long", day: "numeric", month: "long" });
-  return `<main class="wrap">${header(date, "Aujourd'hui.", `${g.length} à traiter · ${vocals.length} vocaux à envoyer`)}
-  ${seg()}
-  ${mine.length ? `<div class="section"><h2>Transférés à toi</h2><span class="muted">${mine.length}</span></div><div class="card">${mine.map((c) =>
+  const dms = dmGroups().filter(({ c }) => S.filter === "all" || c.platform === S.filter);
+  return `${leoBlock}${mine.length ? `<div class="section"><h2>Transférés à toi</h2><span class="muted">${mine.length}</span></div><div class="card">${mine.map((c) =>
     contactRow(c, "", c.last_activity_at, `<div class="transfer">${esc(c.transfer_note)}</div><div class="btns"><a class="btn small" href="#p-${c.id}">Ouvrir</a>${c.username ? `<button class="btn small" data-act="copy" data-v="${esc(c.username)}">Copier le pseudo</button>` : ""}<button class="btn small" data-act="seen" data-id="${c.id}">Vu</button></div>`)).join("")}</div>` : ""}
-  ${vocals.length && isAdmin() ? `<div class="section"></div><section class="vocal"><div class="kicker">Pour toi · Instagram</div><h2>${vocals.length} vocal${vocals.length > 1 ? "s" : ""} à envoyer.</h2>${vocals.slice(0, 3).map(vRow).join("")}${vocals.length > 3 ? `<div class="vrow"><a class="vbtn" href="#vocaux" style="display:inline-flex;align-items:center;text-decoration:none">Voir les ${vocals.length}</a></div>` : ""}</section>` : ""}
-  ${draftsBlock()}
-  ${g.length ? SOURCES.map(([k, l]) => {
-    const part = g.filter(({ c }) => sourceOf(c.id) === k);
-    if (!part.length) return "";
-    const title = k === "presence" ? `Présence · ${esc(setterName())} prend la relève` : k === "lead_magnet" ? "Lead magnet" : "Autres commentaires et messages";
-    return `<div class="section"><h2>${title}</h2><span class="muted">${part.length}</span></div>
-    <div class="card">${part.map(({ c, items }) => contactRow(c, items[0].text + (items.length > 1 ? ` (+${items.length - 1})` : ""), items[0].created_at,
-    `<div class="chips"><span class="chip">${esc(KIND[items[0].kind] || "")}</span></div><div class="btns">${c.username ? `<button class="btn small" data-act="copy" data-v="${esc(c.username)}">Copier le pseudo</button>` : ""}<a class="btn small" href="#p-${c.id}">Ouvrir</a>${canEdit() ? `<button class="btn small primary" data-act="done" data-id="${c.id}">Traité</button>` : ""}</div>`)).join("")}</div>`;
-  }).join("") : `<div class="section"><h2>À traiter</h2></div><div class="card"><div class="empty">Rien à traiter pour l'instant.</div></div>`}
-  </main>${nav("aujourdhui")}`;
-}
-
-function draftsBlock() {
-  const todo = S.drafts.filter((d) => d.status === "a_valider");
-  const queued = S.drafts.filter((d) => ["valide", "envoi"].includes(d.status)).length;
-  const failed = S.drafts.filter((d) => d.status === "echec");
-  if (!todo.length && !queued && !failed.length) return "";
-  const ed = canEdit();
-  return `<div class="section"><h2>Réponses proposées par Claude</h2><span class="muted">${todo.length}</span></div>
-  ${queued ? `<p class="note" style="margin-top:0">${queued} réponse${queued > 1 ? "s" : ""} en cours de publication.</p>` : ""}
-  <div class="card">${todo.map((d) => {
-    const c = contactById(d.contact_id) || { id: d.contact_id, platform: d.platform };
-    return contactRow(c, d.comment_text || "", d.created_at, `${d.claude_note ? `<div class="chips"><span class="chip warm">${esc(d.claude_note)}</span></div>` : ""}
-      <label for="d-${d.id}" style="margin-top:8px">Réponse proposée</label>
-      <textarea id="d-${d.id}" ${ed ? "" : "disabled"} style="min-height:72px">${esc(d.draft)}</textarea>
-      ${ed ? `<div class="btns"><button class="btn small primary" data-act="draft-ok" data-id="${d.id}">Valider</button><button class="btn small" data-act="draft-skip" data-id="${d.id}">Ignorer</button></div>` : ""}`);
-  }).join("")}${failed.map((d) => {
-    const c = contactById(d.contact_id) || { id: d.contact_id, platform: d.platform };
-    const why = d.error?.message && !d.error?.error ? d.error.message : "Instagram ou Facebook a refusé la publication.";
-    return contactRow(c, d.draft, d.created_at, `<div class="chips"><span class="chip warm">Publication impossible</span></div><p class="muted" style="margin:4px 0 0">${esc(why)}</p>`);
-  }).join("")}</div>`;
+  ${dms.length ? `<div class="section"><h2>Messages privés à traiter</h2><span class="muted">${dms.length}</span></div><div class="card">${dms.map(({ c, items }) =>
+    contactRow(c, items[0].text + (items.length > 1 ? ` (+${items.length - 1})` : ""), items[0].created_at, `<div class="btns">${c.username ? `<button class="btn small" data-act="copy" data-v="${esc(c.username)}">Copier le pseudo</button>` : ""}<a class="btn small" href="#p-${c.id}">Ouvrir</a>${canEdit() ? `<button class="btn small primary" data-act="dm-done" data-id="${c.id}">Traité</button>` : ""}</div>`)).join("")}</div>` : ""}`;
 }
 
 function vRow(c) {
@@ -333,7 +309,7 @@ function vRow(c) {
 
 function viewVocals() {
   const vocals = S.contacts.filter((c) => c.needs_vocal && !c.do_not_contact);
-  return `<main class="wrap">${header("Instagram", "Vocaux.", "Copie le pseudo, envoie ton vocal sur Insta, puis touche Envoyé.")}
+  return `<main class="wrap">${header("Instagram", "Vocaux.", "Copie le pseudo et envoie ton vocal sur Insta. Je le vois tout seul et je réponds sous son commentaire.")}
   <section class="vocal">${vocals.length ? vocals.map(vRow).join("") : `<p style="margin:6px 0 12px;color:#c9d8cd">Aucun vocal en attente.</p>`}</section>
   </main>${nav("vocaux")}`;
 }
@@ -343,6 +319,8 @@ function viewProspects() {
   const list = S.contacts.filter((c) => (!S.sourceFilter || sourceOf(c.id) === S.sourceFilter) && (!S.stageFilter || c.stage === S.stageFilter) && (!q || label(c).toLowerCase().includes(q) || (c.display_name || "").toLowerCase().includes(q)) && (S.filter === "all" || c.platform === S.filter));
   return `<main class="wrap">${header(`${S.contacts.length} personnes`, "Prospects.", "")}
   ${seg()}
+  ${inboxBlock()}
+  <div class="section"><h2>Toutes les personnes</h2></div>
   <div class="seg" role="group" aria-label="Case" style="grid-template-columns:repeat(4,minmax(0,1fr))"><button data-act="sourcef" data-v="" aria-pressed="${!S.sourceFilter}">Tous</button>${SOURCES.map(([k, l]) => `<button data-act="sourcef" data-v="${k}" aria-pressed="${S.sourceFilter === k}">${l}</button>`).join("")}</div>
   <label for="search" class="sr" style="position:absolute;left:-9999px">Rechercher</label>
   <input id="search" type="search" placeholder="Rechercher un pseudo ou un nom" value="${esc(S.search)}" data-act="search" style="margin-bottom:12px">
@@ -541,7 +519,8 @@ function viewLogin(needsSetup, error) {
 
 // ---------- rendu ----------
 async function render() {
-  const h = location.hash.replace("#", "") || "aujourdhui";
+  let h = location.hash.replace("#", "") || "prospects";
+  if (["aujourdhui", "commentaires"].includes(h)) h = "prospects";
   if (!S.session) {
     const { data } = await sb.functions.invoke("team", { body: { action: "status" } });
     app.innerHTML = viewLogin(!!data?.needsSetup);
@@ -558,7 +537,7 @@ async function render() {
   else if (h === "automatisations") html = viewAutomationsPage();
   else if (h === "rdv") { S.plusTab = "rdv"; html = viewPlus(); }
   else if (h === "plus") html = viewPlus();
-  else html = viewToday();
+  else html = viewProspects();
   const y = window.scrollY, keepScroll = render._last === h;
   app.innerHTML = html;
   render._last = h;
@@ -589,6 +568,15 @@ app.addEventListener("click", async (e) => {
   if (!canEdit()) return;
   b.disabled = true;
   if (act === "done") return markHandled(id);
+  if (act === "dm-done") {
+    const { error } = await sb.from("interactions").update({ handled: true, handled_by: S.me.user_id, handled_at: new Date().toISOString() })
+      .eq("contact_id", id).eq("kind", "dm_in").eq("handled", false);
+    if (error) { b.disabled = false; return toast("Erreur : " + error.message); }
+    toast("Marqué comme traité");
+    return refresh();
+  }
+
+
   if (act === "draft-ok" || act === "draft-skip") {
     const d = S.drafts.find((x) => String(x.id) === id);
     const patch = act === "draft-ok"
@@ -611,6 +599,14 @@ app.addEventListener("click", async (e) => {
       toast(res?.ok ? "Réponse publiée" : "Validée : elle part dans 2 minutes au plus tard");
     } else toast("Commentaire ignoré");
     return refresh();
+  }
+  if (act === "handoff-done") {
+    if (await updateContact(id, { handoff_note: null, stage: ["nouveau", "premier_message"].includes(contactById(id)?.stage) ? "premier_message" : contactById(id)?.stage })) {
+      await logActivity(id, "repris en privé");
+      toast("Noté comme pris en charge");
+      render();
+    }
+    return;
   }
   if (act === "seen") { await updateContact(id, { transfer_note: null }); return render(); }
   if (act === "vocal-done") {
