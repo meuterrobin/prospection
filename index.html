@@ -167,7 +167,7 @@ details.msgs[open] summary:after{content:" ⌄";}
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.2/dist/umd/supabase.js"></script>
 <script>
 {
-const APP_VERSION = "2026-11-26.9";
+const APP_VERSION = "2026-11-27.1";
 const SUPABASE_URL = "https://ytrjfjfeyzbzyrefyqgb.supabase.co";
 const SUPABASE_KEY = "sb_publishable_4RgNkgjYq8yuEgB6zh2Kgg_rgMCoXJg";
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: true, storageKey: "ic-prospection" } });
@@ -493,11 +493,14 @@ function autoCard(a) {
   rows.push(["Appels réservés", st.calls], ["Clients", st.clients]);
   const max = Math.max(1, st.trig);
   const msg = [];
-  if (has("question")) msg.push(`<div class="mlabel">Message privé${a.mode_facebook === "question" && a.mode_instagram !== "question" ? " · Facebook" : ""}</div><p class="bubble">${tpl(a.question_text, a)}</p>`);
+  if (has("question")) {
+    const qs = a.question_variants?.length ? a.question_variants : [a.question_text];
+    msg.push(`<div class="mlabel">Message privé${a.mode_facebook === "question" && a.mode_instagram !== "question" ? " · Facebook" : ""}${qs.length > 1 ? ", une version au hasard" : ""}</div>${qs.map((q) => `<p class="bubble">${tpl(q, a)}</p>`).join("")}`);
+  }
   if (a.mode_instagram === "ressource") msg.push(`<div class="mlabel">Message privé · Instagram</div><p class="bubble">${tpl(a.welcome_instagram, a)}</p><span class="qbtn">${esc(a.button_instagram || "")}</span>`);
   if (a.mode_facebook === "ressource") msg.push(`<div class="mlabel">Message privé · Facebook</div><p class="bubble">${tpl(a.welcome_facebook, a)}</p><span class="qbtn">${esc(a.button_facebook || "")}</span>`);
   if (a.mode_instagram === "ressource" && a.not_following_text) msg.push(`<div class="mlabel">Si pas encore abonné (Instagram)</div><p class="bubble">${tpl(a.not_following_text, a)}</p>`);
-  if (has("ressource")) msg.push(`<div class="mlabel">Après le clic</div><p class="bubble">${tpl(a.resource_text, a)}</p>`);
+  if (has("ressource")) msg.push(`<div class="mlabel">Après le clic</div><p class="bubble">${tpl(a.resource_text, a)}</p>${a.resource_button ? `<span class="qbtn">${esc(a.resource_button)}</span>` : ""}`);
   if (has("ressource") && a.followup_text) msg.push(`<div class="mlabel">${a.followup_hours} h plus tard</div><p class="bubble">${tpl(a.followup_text, a)}</p>`);
   if (has("vocal") && a.vocal_replies?.length) msg.push(`<div class="mlabel">Sous le commentaire, après ton vocal</div>${a.vocal_replies.map((r) => `<p class="bubble">${tpl(r, a)}</p>`).join("")}`);
   if ((has("ressource") || has("question")) && a.public_replies?.length) msg.push(`<div class="mlabel">Sous le commentaire, une au hasard</div>${a.public_replies.map((r) => `<p class="bubble">${tpl(r, a)}</p>`).join("")}`);
