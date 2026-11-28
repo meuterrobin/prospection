@@ -58,6 +58,11 @@ h2{margin:0;font-size:19px;font-weight:700;letter-spacing:-.01em}
 .vrow{display:flex;align-items:center;gap:12px;padding:8px 0;border-top:1px solid rgba(245,243,238,.12)}
 .vrow .who{flex:1;display:flex;flex-direction:column}
 .vrow .who b{font-size:15px}.vrow .who span{font-size:12.5px;color:#c9d8cd}
+.vrow a.who{color:inherit;text-decoration:none;min-height:44px;justify-content:center}
+.conv{border-top:1px solid var(--line)}.conv:first-child{border-top:0}.conv .item{border-top:0}
+.sortbar{display:flex;flex-wrap:wrap;gap:8px;padding:0 14px 12px 66px}
+.section h2{margin:0;font:400 22px/1.2 var(--serif);color:var(--forest)}
+.vrow a.who b .chev{font-size:15px;color:#c9d8cd;font-weight:400}
 .vbtn{height:40px;padding:0 14px;border-radius:999px;border:1px solid rgba(245,243,238,.3);background:transparent;color:#f5f3ee;font-size:13px;font-weight:600}
 .vbtn.fill{background:#f5f3ee;color:var(--forest);border-color:#f5f3ee}
 .transfer{background:var(--warm-bg);border:1px solid #f0dfc6;border-radius:18px;padding:12px 14px;margin-top:8px;font-size:14px;color:#6b4515}
@@ -80,7 +85,7 @@ label{display:block;font-size:13px;font-weight:600;color:var(--ink3);margin:12px
 .kpi b{display:block;font:400 34px/1.05 var(--serif);color:var(--forest)}
 .kpi span{font-size:13px;color:var(--ink4);font-weight:600}
 .bar{height:6px;border-radius:999px;background:#f1eee8;overflow:hidden;margin-top:6px}.bar i{display:block;height:100%;background:var(--sage-light);border-radius:999px}
-nav.tabs{position:fixed;left:0;right:0;bottom:0;background:rgba(250,248,244,.95);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border-top:1px solid var(--line);padding:6px 4px calc(env(safe-area-inset-bottom) + 6px);display:grid;grid-template-columns:repeat(4,auto);justify-content:space-around;z-index:10}
+nav.tabs{position:fixed;left:0;right:0;bottom:0;background:rgba(250,248,244,.95);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border-top:1px solid var(--line);padding:6px 4px calc(env(safe-area-inset-bottom) + 6px);display:grid;grid-template-columns:repeat(5,auto);justify-content:space-around;z-index:10}
 nav.tabs a{min-width:48px;padding-left:2px;padding-right:2px;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 0;font-size:11px;font-weight:600;color:var(--ink4);text-decoration:none;position:relative}
 nav.tabs a[aria-current=page]{color:var(--forest)}
 nav.tabs svg{width:24px;height:24px}
@@ -167,7 +172,7 @@ details.msgs[open] summary:after{content:" ⌄";}
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.2/dist/umd/supabase.js"></script>
 <script>
 {
-const APP_VERSION = "2026-11-27.1";
+const APP_VERSION = "2026-11-28.2";
 const SUPABASE_URL = "https://ytrjfjfeyzbzyrefyqgb.supabase.co";
 const SUPABASE_KEY = "sb_publishable_4RgNkgjYq8yuEgB6zh2Kgg_rgMCoXJg";
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: true, storageKey: "ic-prospection" } });
@@ -205,7 +210,9 @@ function needs(c) {
   if (c.transfer_note && c.owner_id === S.me?.user_id) out.push({ k: "transfer", tag: "Pour toi", cls: "warm", text: c.transfer_note, at: c.last_activity_at });
   return out;
 }
-const todoCount = () => S.contacts.filter((c) => platOk(c) && needs(c).length).length;
+// Prospects : tout sauf les messages reçus, qui ont leur onglet
+const tasks = (c) => needs(c).filter((n) => n.k !== "dm");
+const todoCount = () => S.contacts.filter((c) => platOk(c) && tasks(c).length).length;
 function ago(d) {
   if (!d) return "";
   const s = (Date.now() - new Date(d).getTime()) / 1000;
@@ -242,14 +249,19 @@ const svg = (k) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" s
 // ---------- données ----------
 async function loadAll() {
   const since = new Date(Date.now() - 21 * 86400000).toISOString();
-  const [m, c, t, a, e, k] = await Promise.all([
+  const [m, c, t, a, e, k, d] = await Promise.all([
     sb.from("team_members").select("*").order("created_at"),
     sb.from("contacts").select("*").order("last_activity_at", { ascending: false }).limit(3000),
     sb.from("interactions").select("id,contact_id,kind,text,created_at").eq("handled", false).eq("kind", "dm_in").order("created_at", { ascending: false }).limit(500),
     sb.from("automations").select("*").order("sort"),
     sb.from("automation_events").select("keyword,contact_id,platform,event,ok,created_at").order("created_at", { ascending: false }).limit(10000),
     sb.from("interactions").select("contact_id,text").eq("kind", "comment").gte("created_at", since).order("created_at", { ascending: false }).limit(3000),
+    sb.from("interactions").select("contact_id,kind,text,created_at").in("kind", ["dm_in", "dm_out", "auto"]).gte("created_at", new Date(Date.now() - 30 * 86400000).toISOString()).order("created_at", { ascending: false }).limit(3000),
   ]);
+  // Conversations privées : dernier message de chaque personne qui a écrit ces 30 derniers jours
+  S.conv = new Map();
+  const wrote = new Set((d.data || []).filter((x) => x.kind === "dm_in").map((x) => x.contact_id));
+  for (const x of d.data || []) if (wrote.has(x.contact_id) && !S.conv.has(x.contact_id)) S.conv.set(x.contact_id, x);
   S.lastComment = new Map();
   for (const x of k.data || []) if (!S.lastComment.has(x.contact_id) && x.text) S.lastComment.set(x.contact_id, x.text);
   S.members = m.data || [];
@@ -283,12 +295,12 @@ async function updateContact(id, patch) {
   Object.assign(contactById(id) || {}, patch);
   return true;
 }
-async function markHandled(contactId) {
+async function markHandled(contactId, msg = "Marqué comme traité") {
   const { error } = await sb.from("interactions").update({ handled: true, handled_by: S.me.user_id, handled_at: new Date().toISOString() })
     .eq("contact_id", contactId).eq("handled", false);
   if (error) return toast("Erreur : " + error.message);
   S.todo = S.todo.filter((i) => i.contact_id !== contactId);
-  toast("Marqué comme traité");
+  toast(msg);
   render();
 }
 
@@ -296,8 +308,9 @@ async function markHandled(contactId) {
 function nav(active) {
   const vocals = S.contacts.filter((c) => c.needs_vocal && !c.do_not_contact).length;
   const tabs = [
-    ["prospects", "Prospects", "people", S.contacts.filter((c) => needs(c).length).length],
+    ["prospects", "Prospects", "people", S.contacts.filter((c) => tasks(c).length).length],
     ["vocaux", "Vocaux", "vocal", vocals],
+    ["messages", "Messages", "chat", msgCount()],
     ["automatisations", "Automatisations", "bolt", 0],
     ["plus", "Plus", "more", 0],
   ];
@@ -314,12 +327,12 @@ function header(kicker, title, sub) {
 function filterRow(views, current, act) {
   return `<div class="filters" role="group" aria-label="Filtres">${views.map(([k, l, n]) =>
     `<button class="fchip" data-act="${act}" data-v="${k}" aria-pressed="${current === k}">${esc(l)}${n ? `<span class="n">${n}</span>` : ""}</button>`).join("")}
-    <span class="fsep" aria-hidden="true"></span>
+    ${views.length ? '<span class="fsep" aria-hidden="true"></span>' : ""}
     ${[["instagram", "Instagram"], ["facebook", "Facebook"]].map(([k, l]) => `<button class="fchip" data-act="filter" data-v="${k}" aria-pressed="${S.filter === k}">${l}</button>`).join("")}</div>`;
 }
 
 function item(c) {
-  const n = needs(c);
+  const n = tasks(c);
   const owner = c.owner_id && c.owner_id !== S.me?.user_id ? memberName(c.owner_id) : "";
   const src = sourceOf(c.id);
   const meta = [platName(c.platform), src !== "autre" ? SOURCE[src] : "", STAGE[c.stage] || c.stage, owner].filter(Boolean).join(" · ");
@@ -342,8 +355,8 @@ function viewProspects() {
   let list = S.contacts.filter((c) => platOk(c)
     && (!q || label(c).toLowerCase().includes(q) || (c.display_name || "").toLowerCase().includes(q) || (c.notes || "").toLowerCase().includes(q)));
   if (S.view === "todo") {
-    list = list.filter((c) => needs(c).length)
-      .sort((a, b) => new Date(needs(b)[0].at || b.last_activity_at) - new Date(needs(a)[0].at || a.last_activity_at));
+    list = list.filter((c) => tasks(c).length)
+      .sort((a, b) => new Date(tasks(b)[0].at || b.last_activity_at) - new Date(tasks(a)[0].at || a.last_activity_at));
   } else if (S.view) list = list.filter((c) => sourceOf(c.id) === S.view);
   const shown = list.slice(0, S.limit);
   const views = [["", "Tous"], ["todo", "À traiter", todoCount()], ...SOURCES];
@@ -356,16 +369,62 @@ function viewProspects() {
 }
 
 function vRow(c) {
-  return `<div class="vrow"><div class="who"><b>${esc(label(c))}</b><span>${esc(c.vocal_reason || "")} · ${esc(ago(c.last_activity_at))}</span></div>
+  return `<div class="vrow"><a class="who" href="#p-${c.id}" aria-label="Ouvrir la fiche de ${esc(label(c))}"><b>${esc(label(c))} <span class="chev" aria-hidden="true">›</span></b><span>${esc(c.vocal_reason || "")} · ${esc(ago(c.last_activity_at))}</span></a>
   ${c.username ? `<button class="vbtn" data-act="copy" data-v="${esc(c.username)}">Copier</button>` : ""}
   ${canEdit() ? `<button class="vbtn fill" data-act="vocal-done" data-id="${c.id}">Envoyé</button>` : ""}</div>`;
 }
 
 function viewVocals() {
   const vocals = S.contacts.filter((c) => c.needs_vocal && !c.do_not_contact);
-  return `<main class="wrap">${header("Instagram", "Vocaux.", "Copie le pseudo, envoie ton vocal. Je réponds sous son commentaire.")}
+  return `<main class="wrap">${header("Instagram", "Vocaux.", "Copie le pseudo, envoie ton vocal. Touche un nom pour ouvrir sa fiche.")}
   <section class="vocal">${vocals.length ? vocals.map(vRow).join("") : `<p style="margin:6px 0 12px;color:#c9d8cd">Aucun vocal en attente.</p>`}</section>
   </main>${nav("vocaux")}`;
+}
+
+// ---------- Messages : qui répond, toi ou Léo ----------
+const unreadOf = (c) => S.dms.get(c.id)?.length || 0;
+const lastAt = (c) => S.dms.get(c.id)?.[0]?.created_at || S.conv.get(c.id)?.created_at || c.last_activity_at;
+const toSortList = () => isAdmin() ? S.contacts.filter((c) => S.dms.has(c.id) && !c.owner_id) : [];
+const msgCount = () => toSortList().length + S.contacts.filter((c) => c.owner_id === S.me?.user_id && S.dms.has(c.id)).length;
+
+function convRow(c, sortable) {
+  const unread = unreadOf(c);
+  const last = S.dms.get(c.id)?.[0] || S.conv.get(c.id);
+  const txt = last ? (last.kind && last.kind !== "dm_in" ? "Toi : " : "") + (last.text || "") : "";
+  const meta = [platName(c.platform), c.do_not_contact ? "Ne pas contacter" : ""].filter(Boolean).join(" · ");
+  const others = S.members.filter((m) => m.active && m.user_id !== S.me.user_id);
+  return `<div class="conv">
+    <a class="item" href="#p-${c.id}">
+      <span class="ini" aria-hidden="true">${esc(initial(c))}</span>
+      <span class="body">
+        <span class="l1"><b>${esc(label(c))}</b><span class="time">${esc(ago(lastAt(c)))}</span></span>
+        <span class="l2">${esc(meta)}</span>
+        <span class="l3">${unread ? `<span class="tag">${unread > 1 ? `${unread} nouveaux` : "Nouveau"}</span>` : ""}<span class="txt">${esc(txt)}</span></span>
+      </span>
+      <span class="chev" aria-hidden="true">›</span></a>
+    ${sortable && canEdit() ? `<div class="sortbar" role="group" aria-label="Qui répond à ${esc(label(c))}">
+      <button class="btn small primary" data-act="assign" data-id="${c.id}" data-to="${S.me.user_id}">Moi</button>
+      ${others.map((m) => `<button class="btn small" data-act="assign" data-id="${c.id}" data-to="${m.user_id}">${esc(m.display_name)}</button>`).join("")}
+      <button class="btn small" data-act="noreply" data-id="${c.id}">Pas de réponse</button></div>` : ""}
+  </div>`;
+}
+
+function viewMessages() {
+  const recent = (c) => platOk(c) && (S.dms.has(c.id) || S.conv.has(c.id));
+  const byTime = (a, b) => new Date(lastAt(b)) - new Date(lastAt(a));
+  const unreadFirst = (a, b) => (unreadOf(b) > 0) - (unreadOf(a) > 0) || byTime(a, b);
+  const toSort = toSortList().filter(platOk).sort(byTime);
+  const groups = [];
+  if (isAdmin()) groups.push(["À trier", toSort, true, "Rien à trier. Tout est à jour."]);
+  for (const m of isAdmin() ? S.members.filter((x) => x.active && x.user_id !== S.me.user_id) : []) {
+    groups.push([`Pour ${m.display_name}`, S.contacts.filter((c) => recent(c) && c.owner_id === m.user_id).sort(unreadFirst), false, "Aucune conversation pour l'instant."]);
+  }
+  groups.push(["Pour toi", S.contacts.filter((c) => recent(c) && c.owner_id === S.me.user_id).sort(unreadFirst), false, "Aucune conversation pour l'instant."]);
+  return `<main class="wrap">${header("Messages privés", "Messages.", isAdmin() ? "Choisis qui répond : toi ou " + setterName() + "." : "Les conversations que Robin t'a confiées.")}
+  ${filterRow([], S.view, "view")}
+  ${groups.map(([title, list, sortable, empty]) => `<div class="section"><h2>${esc(title)}</h2><span class="muted">${list.length || ""}</span></div>
+  <div class="list">${list.length ? list.map((c) => convRow(c, sortable)).join("") : `<div class="empty">${esc(empty)}</div>`}</div>`).join("")}
+  </main>${nav("messages")}`;
 }
 
 async function viewContact(id) {
@@ -385,10 +444,18 @@ async function viewContact(id) {
   const src = sourceOf(c.id);
   const actBtn = { dm: ["dm-done", "Traité"], leo: ["handoff-done", "Pris en charge"], transfer: ["seen", "Vu"] };
   const kick = { dm: "Message reçu", leo: `Pour ${setterName()}`, transfer: "Transféré à toi" };
+  const BACK = { vocaux: "Vocaux", messages: "Messages" };
+  const back = BACK[S.back] ? [S.back, BACK[S.back]] : ["prospects", "Prospects"];
+  const vocal = c.needs_vocal && !c.do_not_contact
+    ? `<div class="action blue"><div class="kicker">Vocal à envoyer · ${esc(ago(c.last_activity_at))}</div><p>${esc(c.vocal_reason || "")}</p>
+      ${ed ? `<div class="btns" style="margin-top:0"><button class="btn small primary" data-act="vocal-done" data-id="${c.id}">Envoyé</button><button class="btn small" data-act="vocal-retire" data-id="${c.id}">Retirer des vocaux</button><button class="btn small" data-act="vocal-never" data-id="${c.id}">Ne plus proposer</button></div>
+      <p style="margin:8px 0 0;font-size:12.5px;color:inherit">Retirer : aucune réponse sous son commentaire. Ne plus proposer : la personne ne reviendra plus dans tes vocaux.</p>` : ""}</div>`
+    : "";
   return `<main class="wrap">
-  <a class="back" href="#prospects">‹ Prospects</a>
+  <a class="back" href="#${back[0]}">‹ ${back[1]}</a>
   <div class="head" style="align-items:center;margin-bottom:14px"><div style="display:flex;gap:14px;align-items:center"><span class="ini" style="width:56px;height:56px;font-size:26px" aria-hidden="true">${esc(initial(c))}</span>
   <div><h1 style="font-size:28px;font-style:normal">${esc(c.display_name || label(c))}</h1><p class="sub" style="margin:2px 0 0">${esc([label(c) !== (c.display_name || label(c)) ? label(c) : "", platName(c.platform), src !== "autre" ? SOURCE[src] : ""].filter(Boolean).join(" · "))}</p></div></div></div>
+  ${vocal}
   ${needs(c).map((n) => `<div class="action ${n.cls === "warm" ? "warm" : "blue"}"><div class="kicker">${esc(kick[n.k])} · ${esc(ago(n.at))}</div><p>${esc(n.text || "")}</p>${ed ? `<button class="btn small primary" data-act="${actBtn[n.k][0]}" data-id="${c.id}">${actBtn[n.k][1]}</button>` : ""}</div>`).join("")}
   <div class="pills">${c.username ? `<button class="btn small" data-act="copy" data-v="${esc(c.username)}">Copier le pseudo</button>` : ""}${link ? `<a class="btn small" href="${link}" target="_blank" rel="noopener">Profil</a>` : ""}${ed && c.platform === "instagram" && !c.needs_vocal ? `<button class="btn small" data-act="to-vocal" data-id="${c.id}">Vocal</button>` : ""}${ed ? others.map((m) => `<button class="btn small" data-act="transfer" data-id="${c.id}" data-to="${m.user_id}">À ${esc(m.display_name)}</button>`).join("") : ""}</div>
   <div class="group">
@@ -401,7 +468,7 @@ async function viewContact(id) {
   ${ed ? `<div class="btns"><button class="btn small" data-act="notes" data-id="${c.id}">Enregistrer</button></div>` : ""}
   <div class="section"><h2>Historique</h2><span class="muted">${events.length}</span></div>
   <div class="card" style="padding:6px 16px">${events.length ? `<div class="tl">${events.map((e) => `<div class="ev ${e.out ? "out" : ""}"><div class="meta">${esc(e.meta)} · ${esc(ago(e.at))}</div>${e.text ? `<p>${esc(e.text)}</p>` : ""}</div>`).join("")}</div>` : `<div class="empty">Pas encore d'historique.</div>`}</div>
-  </main>${nav("prospects")}`;
+  </main>${nav(back[0])}`;
 }
 
 function rdvBody() {
@@ -416,7 +483,7 @@ function viewStats() {
   return `<main class="wrap">${header("Vue d'ensemble", "Chiffres.", "")}
   <div class="kpis">
     <div class="kpi"><span>Nouveaux cette semaine</span><b>${newWeek}</b></div>
-    <div class="kpi"><span>Vocaux en attente</span><b>${S.contacts.filter((c) => c.needs_vocal).length}</b></div>
+    <div class="kpi"><span>Vocaux en attente</span><b>${S.contacts.filter((c) => c.needs_vocal && !c.do_not_contact).length}</b></div>
     <div class="kpi"><span>Appels réservés</span><b>${k("appel_reserve")}</b></div>
     <div class="kpi"><span>Clients</span><b>${k("client")}</b></div>
   </div>
@@ -576,8 +643,11 @@ async function render() {
     return;
   }
   let html;
+  // la fiche revient vers la liste d'où on l'a ouverte (Prospects ou Vocaux)
+  if (h.startsWith("p-") && render._last && !render._last.startsWith("p-")) S.back = render._last;
   if (h.startsWith("p-")) html = await viewContact(h.slice(2));
   else if (h === "vocaux") html = viewVocals();
+  else if (h === "messages") html = viewMessages();
   else if (h === "prospects") html = viewProspects();
   else if (h === "automatisations") html = viewAutomationsPage();
   else if (h === "rdv") { S.plusTab = "rdv"; html = viewPlus(); }
@@ -635,6 +705,31 @@ app.addEventListener("click", async (e) => {
     }
     return;
   }
+  if (act === "assign") {
+    const to = b.dataset.to, who = to === S.me.user_id ? "toi" : memberName(to);
+    b.disabled = true;
+    if (await updateContact(id, { owner_id: to })) {
+      await logActivity(id, to === S.me.user_id ? "répond lui-même" : `confié à ${memberName(to)}`);
+      toast(`Conversation pour ${who}`);
+    }
+    render();
+    return;
+  }
+  if (act === "noreply") {
+    b.disabled = true;
+    await markHandled(id, "Pas de réponse : sorti de la liste");
+    return;
+  }
+  if (act === "vocal-retire" || act === "vocal-never") {
+    const never = act === "vocal-never";
+    b.disabled = true;
+    const { error } = await sb.rpc("retirer_des_vocaux", { p_contact: id, p_ne_plus_proposer: never });
+    if (error) { b.disabled = false; toast("Erreur : " + error.message); return; }
+    Object.assign(contactById(id) || {}, { needs_vocal: false }, never ? { do_not_contact: true } : {});
+    toast(never ? "Retiré. Ne reviendra plus dans tes vocaux." : "Retiré des vocaux, sans réponse sous son commentaire.");
+    render();
+    return;
+  }
   if (act === "to-vocal") { if (await updateContact(id, { needs_vocal: true, vocal_reason: "Ajouté par " + S.me.display_name })) { toast("Ajouté aux vocaux"); render(); } return; }
   if (act === "stage") { if (await updateContact(id, { stage: v })) { await logActivity(id, "étape : " + STAGE[v]); render(); } return; }
   if (act === "notes") {
@@ -653,7 +748,15 @@ app.addEventListener("change", async (e) => {
   const act = el.dataset.act, id = el.dataset.id;
   if (act === "stage-sel") { if (await updateContact(id, { stage: el.value })) { await logActivity(id, "étape : " + STAGE[el.value]); toast("Étape : " + STAGE[el.value]); } }
   if (act === "owner") { if (await updateContact(id, { owner_id: el.value || null })) { await logActivity(id, "responsable : " + (memberName(el.value) || "personne")); toast("Responsable mis à jour"); } }
-  if (act === "dnc") { if (await updateContact(id, { do_not_contact: el.value === "1" })) toast(el.value === "1" ? "Ne sera plus proposé" : "De nouveau à prospecter"); }
+  if (act === "dnc") {
+    // « Ne pas contacter » sur quelqu'un en attente de vocal : retiré des vocaux sans réponse sous son commentaire
+    if (el.value === "1" && contactById(id)?.needs_vocal) {
+      const { error } = await sb.rpc("retirer_des_vocaux", { p_contact: id, p_ne_plus_proposer: true });
+      if (error) { toast("Erreur : " + error.message); return; }
+      Object.assign(contactById(id) || {}, { needs_vocal: false, do_not_contact: true });
+      toast("Ne sera plus proposé"); render();
+    } else if (await updateContact(id, { do_not_contact: el.value === "1" })) toast(el.value === "1" ? "Ne sera plus proposé" : "De nouveau à prospecter");
+  }
   if (act === "role") teamCall({ action: "update", user_id: id, role: el.value }, "Rôle mis à jour");
 });
 
